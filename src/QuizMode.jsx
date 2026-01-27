@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import OmegaField from './OmegaField';
 import ArrowGrid from './ArrowGrid';
-import { ARROW_PROBLEMS } from './data/quizData';
 import { patterns } from './patterns';
 import { getNextOmegaProblem } from './data/omegaProblems';
 
@@ -31,9 +29,19 @@ export default function QuizMode() {
     const [userSelectedSpot, setUserSelectedSpot] = useState(null);
 
     // --- Arrow Quiz State ---
-    const [arrowState, setArrowState] = useState({ state: 'idle', score: 0, total: 0, message: '' });
-    const [arrowProblem, setArrowProblem] = useState(null);
-    const [arrowTimer, setArrowTimer] = useState(3.0);
+    const [arrowState, setArrowState] = useState({
+        status: 'idle', // idle, playing, fail, clear
+        seqType: null, // 'inner' | 'outer'
+        currentIndex: 0,
+        totalSteps: 0,
+        history: [], // [{r, c}, ...]
+        message: ''
+    });
+    const [arrowProblem, setArrowProblem] = useState(null); // { activeIndices: [], nextIndices: [] }
+
+    // Refs for timer and auto-play
+    const arrowTimerRef = useRef(null);
+    const arrowStartTimeRef = useRef(0);
 
     // --- Omega Logic ---
 
@@ -204,68 +212,128 @@ export default function QuizMode() {
     // Average Calc
     const avgTime = stats.clears > 0 ? (stats.totalTime / stats.clears / 1000).toFixed(2) : '0.00';
 
-    // --- Arrow Logic (Restored) ---
+    // --- Arrow Logic (Redesigned) ---
     const mapLevelToIndices = (level) => {
         if (level < 0 || level > 9) return [];
         return [level, 9 - level];
     };
 
-    const startArrowQuiz = () => {
+    const startArrowQuiz = (type) => { // type: 'inner' | 'outer'
+        if (!type) {
+            const types = ['inner', 'outer'];
+            type = types[Math.floor(Math.random() * types.length)];
+        }
+
         setSubMode('arrow_quiz');
-        setArrowState({ state: 'playing', score: 0, total: 0, message: '' });
-        nextArrowQuestion();
+        setArrowState({
+            status: 'playing',
+            seqType: type,
+            currentIndex: 0,
+            totalSteps: patterns[type].length,
+            history: [],
+            message: ''
+        });
+
+        arrowStartTimeRef.current = Date.now();
+        setElapsedTime(0);
+        processArrowFrame(type, 0);
     };
 
-    const nextArrowQuestion = () => {
-        const types = ['inner', 'outer'];
-        const type = types[Math.floor(Math.random() * types.length)];
-        const problems = ARROW_PROBLEMS[type];
-        const frameIndex = problems[Math.floor(Math.random() * problems.length)];
+    // Main Arrow Logic Processor
+    const processArrowFrame = (seqType, index) => {
+        const sequence = patterns[seqType];
 
-        const sequence = patterns[type];
-        const currentData = sequence[frameIndex] || { levels: [] };
+        // Safety Check
+        if (index >= sequence.length) {
+            finishArrowQuiz('clear');
+            return;
+        }
+
+        const currentData = sequence[index];
+
+        // Prepare display data
         const currentIndices = currentData.levels.flatMap(mapLevelToIndices);
 
-        const nextIndex = (frameIndex + 1) % sequence.length;
-        const nextData = sequence[nextIndex] || { levels: [] };
-        const nextIndices = nextData.levels.flatMap(mapLevelToIndices);
+        // Next Indices Calculation (for validation)
+        let nextIndices = [];
+        if (index + 1 < sequence.length) {
+            const nextData = sequence[index + 1];
+            nextIndices = nextData.levels.flatMap(mapLevelToIndices);
+        }
 
         setArrowProblem({
-            type,
             activeIndices: currentIndices,
-            nextIndices: nextIndices
+            // Next frame info is needed only if current frame is interactive (question: true)
+            nextIndices: nextIndices,
+            isQuestion: currentData.question
         });
-        setArrowState(prev => ({ ...prev, state: 'playing', total: prev.total + 1, message: '' }));
-        setArrowTimer(3.0);
+
+        // If NOT a question (Animation only), auto-advance
+        if (!currentData.question) {
+            arrowTimerRef.current = setTimeout(() => {
+                const nextIndex = index + 1;
+                setArrowState(prev => ({ ...prev, currentIndex: nextIndex }));
+                if (nextIndex >= sequence.length) {
+                    finishArrowQuiz('clear');
+                } else {
+                    processArrowFrame(seqType, nextIndex);
+                }
+            }, 800); // 800ms display for non-questions
+        }
     };
 
     const handleArrowAnswer = (r, c) => {
-        if (arrowState.state !== 'playing') return;
+        if (arrowState.status !== 'playing') return;
+        if (!arrowProblem || !arrowProblem.isQuestion) return; // Ignore clicks during auto-play
+
+        // Validation Logic:
+        // The user must click a Safe Spot for the NEXT frame.
+        // So we check if (r, c) is contained in arrowProblem.nextIndices (Attack).
+        // If it IS in nextIndices -> Hit -> Fail.
+        // If NOT -> Safe -> Pass.
+
         const isHit = arrowProblem.nextIndices.includes(r) || arrowProblem.nextIndices.includes(c);
 
         if (isHit) {
-            setArrowState(prev => ({ ...prev, state: 'feedback', message: 'BOOM!' }));
+            // FAILED
+            setArrowState(prev => ({ ...prev, status: 'fail', message: 'Retry' }));
+            if (arrowTimerRef.current) clearTimeout(arrowTimerRef.current);
         } else {
-            setArrowState(prev => ({ ...prev, state: 'feedback', message: 'SAFE!', score: prev.score + 1 }));
+            // CORRECT -> Advance immediately
+            const nextIndex = arrowState.currentIndex + 1;
+            setArrowState(prev => ({
+                ...prev,
+                currentIndex: nextIndex,
+                history: [...prev.history, { r, c }] // Record trail
+            }));
+            processArrowFrame(arrowState.seqType, nextIndex);
         }
     };
 
-    // Arrow Timer
+    const finishArrowQuiz = (result) => {
+        if (arrowTimerRef.current) clearTimeout(arrowTimerRef.current);
+        const totalTime = Date.now() - arrowStartTimeRef.current;
+        setElapsedTime(totalTime);
+        setArrowState(prev => ({
+            ...prev,
+            status: result,
+            message: result === 'clear' ? 'SEQUENCE COMPLETE!' : 'FAILED'
+        }));
+    };
+
+    // Arrow Timer (Visual Only)
     useEffect(() => {
         let interval;
-        if (subMode === 'arrow_quiz' && arrowState.state === 'playing') {
+        if (subMode === 'arrow_quiz' && arrowState.status === 'playing') {
             interval = setInterval(() => {
-                setArrowTimer(prev => {
-                    if (prev <= 0.1) {
-                        setArrowState(s => ({ ...s, state: 'feedback', message: 'TIME OVER' }));
-                        return 0;
-                    }
-                    return prev - 0.1;
-                });
-            }, 100);
+                setElapsedTime(Date.now() - arrowStartTimeRef.current);
+            }, 30);
         }
-        return () => clearInterval(interval);
-    }, [subMode, arrowState.state]);
+        return () => {
+            clearInterval(interval);
+            if (arrowTimerRef.current) clearTimeout(arrowTimerRef.current);
+        };
+    }, [subMode, arrowState.status]);
 
 
     // --- Render Helpers ---
@@ -316,10 +384,10 @@ export default function QuizMode() {
                                     ⚔️ Code: Omega
                                 </span>
                             </button>
-                            <button onClick={startArrowQuiz}
+                            <button onClick={() => startArrowQuiz()}
                                 className="group relative px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all overflow-hidden">
                                 <span className="relative z-10 flex items-center justify-center gap-2">
-                                    🏹 Cosmo Arrow
+                                    🏹 Cosmo Arrow (Time Attack)
                                 </span>
                             </button>
                         </div>
@@ -395,33 +463,69 @@ export default function QuizMode() {
             )}
 
             {subMode === 'arrow_quiz' && (
-                <div className="flex flex-col items-center w-full max-w-2xl">
-                    {arrowProblem ? (
-                        <>
-                            <div className="flex justify-between w-full mb-4 px-8">
-                                <div className={`text-3xl font-black ${arrowTimer < 1.0 ? 'text-red-500' : 'text-yellow-400'}`}>{arrowTimer.toFixed(1)}s</div>
-                                <div className="text-xl font-bold">Score: {arrowState.score}</div>
+                <div className="flex flex-col items-center w-full max-w-2xl px-4">
+                    <div className="flex justify-between w-full mb-4 md:px-8 items-end">
+                        <div className="flex flex-col">
+                            <div className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Time Elapsed</div>
+                            <div className={`text-4xl font-black font-mono leading-none ${arrowState.status === 'fail' ? 'text-red-500' : 'text-yellow-400'}`}>
+                                {(elapsedTime / 1000).toFixed(2)}s
                             </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Step</div>
+                            <div className="text-2xl font-bold font-mono">
+                                {Math.min(arrowState.currentIndex + 1, arrowState.totalSteps)} / {arrowState.totalSteps}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className={`w-full max-w-xl relative transition-all duration-300 ${arrowProblem?.isQuestion ? 'ring-4 ring-blue-500/50 rounded-lg' : 'opacity-90'}`}>
+                        {arrowProblem && (
                             <ArrowGrid
-                                activeIndices={arrowProblem.activeIndices}
-                                isInteractive={arrowState.state === 'playing'}
+                                activeIndices={arrowState.status === 'fail' ? arrowProblem.nextIndices : arrowProblem.activeIndices}
+                                isInteractive={arrowState.status === 'playing' && arrowProblem.isQuestion}
                                 onCellClick={handleArrowAnswer}
+                                history={arrowState.history}
                             />
-                            {arrowState.state === 'feedback' && (
-                                <div className="text-center mt-6 w-full">
-                                    <div className={`text-4xl font-black mb-4 ${arrowState.message === 'SAFE!' ? 'text-green-500' : 'text-red-500'}`}>
-                                        {arrowState.message}
-                                    </div>
-                                    <button onClick={nextArrowQuestion} className="px-8 py-3 bg-blue-600 rounded-xl font-bold text-white">Next</button>
+                        )}
+                        {/* Overlay Message when !isQuestion (Auto Playing) is NOT necessary due to visual cues, but we can add one if user wants */}
+                        {arrowState.status === 'playing' && arrowProblem && !arrowProblem.isQuestion && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="bg-black/40 backdrop-blur-sm px-4 py-1 rounded-full text-white/80 font-bold text-sm border border-white/20">
+                                    WATCH PATTERN
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {arrowState.message && (
+                        <div className="mt-8 text-center animate-in slide-in-from-bottom-4 fade-in duration-300">
+                            <div className={`text-5xl font-black mb-2 ${arrowState.status === 'clear' ? 'text-green-500' : arrowState.status === 'fail' ? 'text-red-500' : 'text-white'}`}>
+                                {arrowState.message}
+                            </div>
+                            {arrowState.status === 'clear' && (
+                                <div className="text-xl text-slate-300 mb-6">
+                                    Final Time: <span className="text-yellow-400 font-mono font-bold">{(elapsedTime / 1000).toFixed(2)}s</span>
                                 </div>
                             )}
-                        </>
-                    ) : (
-                        <div>Loading...</div>
+                            <div className="flex gap-4 justify-center">
+                                <button onClick={() => startArrowQuiz()} className="px-8 py-3 bg-white text-slate-900 font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg">
+                                    RETRY
+                                </button>
+                                <button onClick={() => setSubMode('menu')} className="px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-all">
+                                    MENU
+                                </button>
+                            </div>
+                        </div>
                     )}
-                    <button onClick={() => setSubMode('menu')} className="mt-8 text-slate-500 hover:text-white underline">
-                        Back to Menu
-                    </button>
+
+                    {!arrowState.message && (
+                        <div className="mt-8 text-slate-500 text-sm font-medium">
+                            {arrowProblem?.isQuestion
+                                ? "👉 DODGE! Click a SAFE SPOT for the NEXT wave!"
+                                : "👀 Watch the pattern..."}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

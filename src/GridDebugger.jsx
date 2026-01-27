@@ -186,7 +186,7 @@ export default function GridDebugger() {
             </div>
 
             {/* Main View Switcher */}
-            <div className="mb-4 w-full px-1 flex justify-center shrink-0">
+            <div className="mb-4 w-full max-w-xl px-1 flex justify-center shrink-0">
                 {viewMode === 'arrow' ? (
                     <ArrowGrid activeIndices={activeIndices} />
                 ) : (
