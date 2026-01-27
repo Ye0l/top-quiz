@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function ArrowGrid({ activeIndices, isInteractive = false, onCellClick, history = [] }) {
+export default function ArrowGrid({ activeIndices, isInteractive = false, onCellClick, history = [], selectedCell = null }) {
     return (
         <div className="relative w-full shrink-0 bg-slate-900 border-4 border-slate-700 rounded-lg shadow-2xl mx-auto" style={{ aspectRatio: '1/1' }}>
 
@@ -45,6 +45,12 @@ export default function ArrowGrid({ activeIndices, isInteractive = false, onCell
                         borderClass = 'border-green-500/40';
                     } else {
                         effectsClass = 'hover:bg-slate-700/50';
+                    }
+
+                    // Selected State (Mobile Confirm Pending)
+                    if (selectedCell && selectedCell.r === row && selectedCell.c === col) {
+                        borderClass = 'border-yellow-400';
+                        effectsClass += ' ring-2 ring-yellow-400 z-20 shadow-[0_0_15px_rgba(250,204,21,0.5)]';
                     }
 
                     return (

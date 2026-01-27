@@ -39,6 +39,17 @@ export default function QuizMode() {
     });
     const [arrowProblem, setArrowProblem] = useState(null); // { activeIndices: [], nextIndices: [] }
 
+    // --- Mobile & UI State ---
+    const [isMobile, setIsMobile] = useState(false);
+    const [userSelectedArrow, setUserSelectedArrow] = useState(null); // {r, c}
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     // Refs for timer and auto-play
     const arrowTimerRef = useRef(null);
     const arrowStartTimeRef = useRef(0);
@@ -63,7 +74,30 @@ export default function QuizMode() {
     const handleOmegaAnswer = (spotId) => {
         if (omegaState !== 'p1_playing' && omegaState !== 'p2_playing') return;
 
-        setUserSelectedSpot(spotId);
+        // Mobile Logic:
+        if (isMobile) {
+            // Unselected -> Select
+            if (userSelectedSpot !== spotId) {
+                setUserSelectedSpot(spotId);
+            }
+            // Selected -> Confirm (Double Tap)
+            else {
+                submitOmegaAnswer(spotId);
+            }
+        } else {
+            // Desktop: Immediate Submit
+            setUserSelectedSpot(spotId);
+            submitOmegaAnswer(spotId);
+        }
+    };
+
+    const submitOmegaAnswer = (spotId) => {
+        if (!spotId) return;
+
+        // Mobile confirmation might happen when state changed (e.g. timeout), though unlikely with current logic.
+        // Re-check state just in case if called async (though usually state is captured in closure if we passed it, 
+        // but here we rely on current state access? No, spotId is passed).
+        // However, we need `omegaState` and `currentSet` from scope.
 
         let currentProblem = omegaState === 'p1_playing' ? currentSet.p1 : currentSet.p2;
         const isCorrect = currentProblem.correctSpots.includes(spotId);
@@ -78,9 +112,13 @@ export default function QuizMode() {
                 setCurrentSet(prev => ({ ...prev, p1Answer: spotId }));
 
                 // Prepare P2 immediately (or after delay)
+                // Prepare P2 after delay and transition
                 setTimeout(() => {
-                    generateP2(currentSet.p1);
-                }, 1000);
+                    setOmegaState('p1_transition'); // Trigger Fade Out
+                    setTimeout(() => {
+                        generateP2(currentSet.p1);
+                    }, 500); // 0.5s Fade Out Duration
+                }, 2000); // 2.0s View Time (Total approx 2.5s)
             } else {
                 // Correct P2 -> Set Clear
                 setOmegaState('set_clear');
@@ -183,6 +221,7 @@ export default function QuizMode() {
             ghosts: ghosts
         }));
 
+        setStartTime(Date.now() - elapsedTime); // Resume timer from current elapsed
         setOmegaState('p2_playing');
         setUserSelectedSpot(null);
         setFeedbackMsg('');
@@ -203,7 +242,17 @@ export default function QuizMode() {
         let interval;
         if (omegaState === 'p1_playing' || omegaState === 'p2_playing') {
             interval = setInterval(() => {
-                setElapsedTime(Date.now() - startTime);
+                const now = Date.now();
+                const elapsed = now - startTime;
+                if (elapsed >= 30000) {
+                    setElapsedTime(30000);
+                    setOmegaState('set_fail');
+                    setFeedbackMsg('TIME LIMIT EXCEEDED!');
+                    updateStats('fail', 30000);
+                    clearInterval(interval);
+                } else {
+                    setElapsedTime(elapsed);
+                }
             }, 100);
         }
         return () => clearInterval(interval);
@@ -234,6 +283,7 @@ export default function QuizMode() {
             message: ''
         });
 
+        setUserSelectedArrow(null); // Reset arrow selection
         arrowStartTimeRef.current = Date.now();
         setElapsedTime(0);
         processArrowFrame(type, 0);
@@ -284,14 +334,29 @@ export default function QuizMode() {
 
     const handleArrowAnswer = (r, c) => {
         if (arrowState.status !== 'playing') return;
-        if (!arrowProblem || !arrowProblem.isQuestion) return; // Ignore clicks during auto-play
+        if (!arrowProblem || !arrowProblem.isQuestion) return;
+
+        // Mobile Logic
+        if (isMobile) {
+            // Unselected or Different -> Select
+            if (!userSelectedArrow || userSelectedArrow.r !== r || userSelectedArrow.c !== c) {
+                setUserSelectedArrow({ r, c });
+            }
+            // Same -> Confirm (Double Tap)
+            else {
+                submitArrowAnswer({ r, c });
+            }
+        } else {
+            // Desktop: Immediate Submit
+            setUserSelectedArrow({ r, c });
+            submitArrowAnswer({ r, c });
+        }
+    };
+
+    const submitArrowAnswer = ({ r, c }) => {
+        if (!r && r !== 0) return; // Safety
 
         // Validation Logic:
-        // The user must click a Safe Spot for the NEXT frame.
-        // So we check if (r, c) is contained in arrowProblem.nextIndices (Attack).
-        // If it IS in nextIndices -> Hit -> Fail.
-        // If NOT -> Safe -> Pass.
-
         const isHit = arrowProblem.nextIndices.includes(r) || arrowProblem.nextIndices.includes(c);
 
         if (isHit) {
@@ -304,8 +369,9 @@ export default function QuizMode() {
             setArrowState(prev => ({
                 ...prev,
                 currentIndex: nextIndex,
-                history: [...prev.history, { r, c }] // Record trail
+                history: [...prev.history, { r, c }]
             }));
+            setUserSelectedArrow(null); // Clear selection for next step
             processArrowFrame(arrowState.seqType, nextIndex);
         }
     };
@@ -321,17 +387,30 @@ export default function QuizMode() {
         }));
     };
 
-    // Arrow Timer (Visual Only)
+    // Arrow Timer (Visual & Logic)
     useEffect(() => {
         let interval;
         if (subMode === 'arrow_quiz' && arrowState.status === 'playing') {
             interval = setInterval(() => {
-                setElapsedTime(Date.now() - arrowStartTimeRef.current);
+                const now = Date.now();
+                const elapsed = now - arrowStartTimeRef.current;
+
+                if (elapsed >= 30000) {
+                    setElapsedTime(30000);
+                    setArrowState(prev => ({
+                        ...prev,
+                        status: 'fail',
+                        message: 'TIME LIMIT!'
+                    }));
+                    if (arrowTimerRef.current) clearTimeout(arrowTimerRef.current);
+                    clearInterval(interval);
+                } else {
+                    setElapsedTime(elapsed);
+                }
             }, 100);
         }
         return () => {
             clearInterval(interval);
-            if (arrowTimerRef.current) clearTimeout(arrowTimerRef.current);
         };
     }, [subMode, arrowState.status]);
 
@@ -371,11 +450,19 @@ export default function QuizMode() {
         let problem = null;
         let ghosts = [];
 
-        if (omegaState === 'p1_playing' || omegaState === 'p1_feedback') {
+        if (omegaState === 'p1_playing' || omegaState === 'p1_feedback' || omegaState === 'p1_transition') {
             problem = currentSet.p1;
-        } else if (omegaState === 'p2_playing' || omegaState === 'p2_feedback' || omegaState === 'set_clear' || omegaState === 'set_fail') {
+        } else if (omegaState === 'p2_playing' || omegaState === 'p2_feedback' || omegaState === 'set_clear') {
             problem = currentSet.p2;
             ghosts = currentSet.ghosts;
+        } else if (omegaState === 'set_fail') {
+            // If failed, show current problem (P2 if exists, else P1)
+            if (currentSet.p2) {
+                problem = currentSet.p2;
+                ghosts = currentSet.ghosts;
+            } else {
+                problem = currentSet.p1;
+            }
         }
 
         if (!problem) return null;
@@ -391,7 +478,9 @@ export default function QuizMode() {
                 selectedSpot={userSelectedSpot}
                 previousAnswerSpot={currentSet.p1Answer}
                 correctSpots={correctSpots}
-                showAttacks={omegaState === 'p1_feedback' || omegaState === 'set_fail' || omegaState === 'set_clear'}
+                showAttacks={omegaState === 'p1_feedback' || omegaState === 'set_fail' || omegaState === 'set_clear' || omegaState === 'p1_transition'}
+                isTransitioning={omegaState === 'p1_transition'}
+                isMobile={isMobile}
             />
         );
     };
@@ -484,13 +573,15 @@ export default function QuizMode() {
                                 </>
                             )}
                         </div>
+                    </div>
+                    {!isMobile && (
                         <button onClick={returnToMenu} className="mt-auto py-3 text-slate-500 hover:text-white font-bold transition-colors">
                             Return to Menu
                         </button>
-                    </div>
+                    )}
+
                 </div>
             )}
-
             {subMode === 'arrow_quiz' && (
                 <div className="flex flex-col items-center w-full max-w-[75vh] px-4">
                     <div className="flex justify-between w-full mb-4 md:px-8 items-end">
@@ -515,6 +606,7 @@ export default function QuizMode() {
                                 isInteractive={arrowState.status === 'playing' && arrowProblem.isQuestion}
                                 onCellClick={handleArrowAnswer}
                                 history={arrowState.history}
+                                selectedCell={userSelectedArrow}
                             />
                         )}
                         {/* Overlay Message when !isQuestion (Auto Playing) is NOT necessary due to visual cues, but we can add one if user wants */}
@@ -556,13 +648,75 @@ export default function QuizMode() {
                         </div>
                     )}
 
-                    {!arrowState.message && (
+                    {!arrowState.message && !isMobile && (
                         <button onClick={returnToMenu} className="mt-8 py-3 text-slate-500 hover:text-white font-bold transition-colors">
                             Return to Menu
                         </button>
                     )}
                 </div>
-            )}
+            )
+            }
+
+            {/* Floating Controls (Mobile Only) */}
+            {
+                isMobile && subMode !== 'menu' && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex gap-4 bg-slate-900/90 p-2 rounded-2xl border border-slate-700 shadow-2xl backdrop-blur-md">
+
+                        {/* CONFIRM BUTTON (Playing State) */}
+                        {((subMode === 'omega_quiz' && (omegaState === 'p1_playing' || omegaState === 'p2_playing')) ||
+                            (subMode === 'arrow_quiz' && arrowState.status === 'playing' && arrowProblem?.isQuestion)) && (
+                                <button
+                                    onClick={() => {
+                                        if (subMode === 'omega_quiz') submitOmegaAnswer(userSelectedSpot);
+                                        if (subMode === 'arrow_quiz' && userSelectedArrow) submitArrowAnswer(userSelectedArrow);
+                                    }}
+                                    disabled={subMode === 'omega_quiz' ? !userSelectedSpot : !userSelectedArrow}
+                                    className={`px-8 py-3 rounded-xl font-black text-lg shadow-lg transition-all flex items-center gap-2
+                            ${(subMode === 'omega_quiz' ? userSelectedSpot : userSelectedArrow)
+                                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:scale-105 active:scale-95'
+                                            : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+                                >
+                                    CONFIRM <span>✓</span>
+                                </button>
+                            )}
+
+                        {/* RETRY / NEXT / MENU BUTTONS (Result State) */}
+
+                        {/* Omega Result Actions */}
+                        {subMode === 'omega_quiz' && (omegaState === 'set_clear' || omegaState === 'set_fail') && (
+                            <>
+                                <button onClick={startOmegaSet} className="px-6 py-3 bg-white text-slate-900 font-bold rounded-xl shadow-lg hover:scale-105">
+                                    {omegaState === 'set_clear' ? 'NEXT' : 'RETRY'}
+                                </button>
+                                <button onClick={returnToMenu} className="px-4 py-3 bg-slate-800 text-white font-bold rounded-xl shadow-md">
+                                    EXIT
+                                </button>
+                            </>
+                        )}
+
+                        {/* Arrow Result Actions */}
+                        {subMode === 'arrow_quiz' && (arrowState.status === 'clear' || arrowState.status === 'fail') && (
+                            <>
+                                <button onClick={() => startArrowQuiz()} className="px-6 py-3 bg-white text-slate-900 font-bold rounded-xl shadow-lg hover:scale-105">
+                                    RETRY
+                                </button>
+                                <button onClick={returnToMenu} className="px-4 py-3 bg-slate-800 text-white font-bold rounded-xl shadow-md">
+                                    EXIT
+                                </button>
+                            </>
+                        )}
+
+                        {/* EXIT Button (Playing) */}
+                        {((subMode === 'omega_quiz' && (omegaState === 'p1_playing' || omegaState === 'p2_playing')) ||
+                            (subMode === 'arrow_quiz' && arrowState.status === 'playing')) && (
+                                <button onClick={returnToMenu} className="px-4 py-3 bg-slate-800/80 text-slate-400 hover:text-white font-bold rounded-xl border border-slate-700">
+                                    ✕
+                                </button>
+                            )}
+
+                    </div>
+                )
+            }
         </div>
-    );
+    )
 }
