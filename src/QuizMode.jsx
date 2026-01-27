@@ -204,13 +204,13 @@ export default function QuizMode() {
         if (omegaState === 'p1_playing' || omegaState === 'p2_playing') {
             interval = setInterval(() => {
                 setElapsedTime(Date.now() - startTime);
-            }, 50);
+            }, 100);
         }
         return () => clearInterval(interval);
     }, [omegaState, startTime]);
 
     // Average Calc
-    const avgTime = stats.clears > 0 ? (stats.totalTime / stats.clears / 1000).toFixed(2) : '0.00';
+    const avgTime = stats.clears > 0 ? (stats.totalTime / stats.clears / 1000).toFixed(1) : '0.0';
 
     // --- Arrow Logic (Redesigned) ---
     const mapLevelToIndices = (level) => {
@@ -327,7 +327,7 @@ export default function QuizMode() {
         if (subMode === 'arrow_quiz' && arrowState.status === 'playing') {
             interval = setInterval(() => {
                 setElapsedTime(Date.now() - arrowStartTimeRef.current);
-            }, 30);
+            }, 100);
         }
         return () => {
             clearInterval(interval);
@@ -337,6 +337,35 @@ export default function QuizMode() {
 
 
     // --- Render Helpers ---
+
+    // --- Return to Menu & Reset ---
+    const returnToMenu = () => {
+        // Clear Arrow Timer
+        if (arrowTimerRef.current) clearTimeout(arrowTimerRef.current);
+
+        // Reset Omega State
+        setOmegaState('idle');
+        setCurrentSet({ p1: null, p2: null, ghosts: [] });
+
+        // Reset Arrow State
+        setArrowState({
+            status: 'idle',
+            seqType: null,
+            currentIndex: 0,
+            totalSteps: 0,
+            history: [],
+            message: ''
+        });
+        setArrowProblem(null);
+
+        // Reset Timers
+        setElapsedTime(0);
+        setStartTime(0);
+        arrowStartTimeRef.current = 0;
+
+        // Reset SubMode
+        setSubMode('menu');
+    };
 
     const renderOmegaField = () => {
         let problem = null;
@@ -370,7 +399,7 @@ export default function QuizMode() {
     return (
         <div className="flex flex-col items-center min-h-screen bg-slate-950 text-white p-4 font-sans overflow-x-hidden w-full">
             <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-6 shrink-0">
-                Raid Quiz / Omega
+                Omega Protocol Trainer
             </h1>
 
             {subMode === 'menu' && (
@@ -387,7 +416,7 @@ export default function QuizMode() {
                             <button onClick={() => startArrowQuiz()}
                                 className="group relative px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all overflow-hidden">
                                 <span className="relative z-10 flex items-center justify-center gap-2">
-                                    🏹 Cosmo Arrow (Time Attack)
+                                    🏹 Cosmo Arrow
                                 </span>
                             </button>
                         </div>
@@ -398,7 +427,7 @@ export default function QuizMode() {
             {subMode === 'omega_quiz' && (
                 <div className="flex flex-col xl:flex-row gap-8 w-full px-4 md:px-8 items-center xl:items-start justify-center animate-in fade-in duration-300">
                     {/* Left Panel: Field */}
-                    <div className="w-full max-w-[500px] shrink-0">
+                    <div className="w-full max-w-[75vh] shrink-0">
                         <div className="relative aspect-square">
                             {renderOmegaField()}
                         </div>
@@ -410,7 +439,7 @@ export default function QuizMode() {
                             <div className="flex justify-between items-center mb-4">
                                 <div className="text-slate-400 font-bold text-sm tracking-wider">TIMER</div>
                                 <div className="font-mono text-4xl font-black text-yellow-400">
-                                    {(elapsedTime / 1000).toFixed(2)}<span className="text-lg text-slate-500 ml-1">s</span>
+                                    {(elapsedTime / 1000).toFixed(1)}<span className="text-lg text-slate-500 ml-1">s</span>
                                 </div>
                             </div>
                             <div className="flex justify-between items-center border-t border-slate-800 pt-4">
@@ -455,7 +484,7 @@ export default function QuizMode() {
                                 </>
                             )}
                         </div>
-                        <button onClick={() => setSubMode('menu')} className="mt-auto py-3 text-slate-500 hover:text-white font-bold transition-colors">
+                        <button onClick={returnToMenu} className="mt-auto py-3 text-slate-500 hover:text-white font-bold transition-colors">
                             Return to Menu
                         </button>
                     </div>
@@ -463,12 +492,12 @@ export default function QuizMode() {
             )}
 
             {subMode === 'arrow_quiz' && (
-                <div className="flex flex-col items-center w-full max-w-2xl px-4">
+                <div className="flex flex-col items-center w-full max-w-[75vh] px-4">
                     <div className="flex justify-between w-full mb-4 md:px-8 items-end">
                         <div className="flex flex-col">
                             <div className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Time Elapsed</div>
                             <div className={`text-4xl font-black font-mono leading-none ${arrowState.status === 'fail' ? 'text-red-500' : 'text-yellow-400'}`}>
-                                {(elapsedTime / 1000).toFixed(2)}s
+                                {(elapsedTime / 1000).toFixed(1)}s
                             </div>
                         </div>
                         <div className="text-right">
@@ -479,7 +508,7 @@ export default function QuizMode() {
                         </div>
                     </div>
 
-                    <div className={`w-full max-w-xl relative transition-all duration-300 ${arrowProblem?.isQuestion ? 'ring-4 ring-blue-500/50 rounded-lg' : 'opacity-90'}`}>
+                    <div className={`w-full relative transition-all duration-300 ${arrowProblem?.isQuestion ? 'ring-4 ring-blue-500/50 rounded-lg' : 'opacity-90'}`}>
                         {arrowProblem && (
                             <ArrowGrid
                                 activeIndices={arrowState.status === 'fail' ? arrowProblem.nextIndices : arrowProblem.activeIndices}
@@ -505,14 +534,14 @@ export default function QuizMode() {
                             </div>
                             {arrowState.status === 'clear' && (
                                 <div className="text-xl text-slate-300 mb-6">
-                                    Final Time: <span className="text-yellow-400 font-mono font-bold">{(elapsedTime / 1000).toFixed(2)}s</span>
+                                    Final Time: <span className="text-yellow-400 font-mono font-bold">{(elapsedTime / 1000).toFixed(1)}s</span>
                                 </div>
                             )}
                             <div className="flex gap-4 justify-center">
                                 <button onClick={() => startArrowQuiz()} className="px-8 py-3 bg-white text-slate-900 font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg">
                                     RETRY
                                 </button>
-                                <button onClick={() => setSubMode('menu')} className="px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-all">
+                                <button onClick={returnToMenu} className="px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-all">
                                     MENU
                                 </button>
                             </div>
@@ -525,6 +554,12 @@ export default function QuizMode() {
                                 ? "👉 DODGE! Click a SAFE SPOT for the NEXT wave!"
                                 : "👀 Watch the pattern..."}
                         </div>
+                    )}
+
+                    {!arrowState.message && (
+                        <button onClick={returnToMenu} className="mt-8 py-3 text-slate-500 hover:text-white font-bold transition-colors">
+                            Return to Menu
+                        </button>
                     )}
                 </div>
             )}

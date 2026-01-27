@@ -78,7 +78,7 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
     };
 
     return (
-        <div className="relative w-full max-w-[440px] shrink-0 mx-auto my-4 transition-all" style={{ aspectRatio: '1/1' }}>
+        <div className="relative w-full shrink-0 mx-auto my-4 transition-all" style={{ aspectRatio: '1/1' }}>
 
             {/* 0.5 Attack Range Layer (Includes Center Boss) */}
             {showAttacks && (
