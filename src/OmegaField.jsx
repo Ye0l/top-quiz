@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
 
+// Import Assets
+import staffImg from '/assets/staff.png';
+import knifeImg from '/assets/knife.png';
+import swordImg from '/assets/sword.png';
+import shieldImg from '/assets/shield.png';
+import omegaFinalImg from '/assets/omega-final.png';
+import omegaMImg from '/assets/omega-m.png';
+import omegaFImg from '/assets/omega-f.png';
+
 // Coordinates & Config
 // Box 600x600. Center 300,300. Radius 300.
 
@@ -43,16 +52,16 @@ const ANSWER_SPOTS = [
 // Weapon overlays (using PNG assets)
 const WeaponIcons = {
     'F-Staff': (
-        <img src="/assets/staff.png" alt="Staff" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
+        <img src={staffImg} alt="Staff" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
     ),
     'F-Legs': (
-        <img src="/assets/knife.png" alt="Legs" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
+        <img src={knifeImg} alt="Legs" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
     ),
     'M-Sword': (
-        <img src="/assets/sword.png" alt="Sword" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
+        <img src={swordImg} alt="Sword" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
     ),
     'M-Shield': (
-        <img src="/assets/shield.png" alt="Shield" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
+        <img src={shieldImg} alt="Shield" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
     )
 };
 
@@ -226,7 +235,7 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
                         >
                             {/* Central Boss Image */}
                             <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-white/50 bg-black/50 shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                                <img src="/assets/omega-final.png" alt="Omega Final" className="w-full h-full object-cover" />
+                                <img src={omegaFinalImg} alt="Omega Final" className="w-full h-full object-cover" />
 
                                 {/* Center Attack Indicator (Monitor Projection) */}
                                 {/* Vertical Type -> Vertical Bar (Blue-Black-Blue) */}
@@ -253,12 +262,12 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
 
                 if (unit) {
                     if (unit.type.startsWith('M-')) {
-                        baseImg = '/assets/omega-m.png';
+                        baseImg = omegaMImg;
                         borderColor = 'border-blue-400';
                         overlayColor = 'bg-blue-500/20';
                     }
                     else if (unit.type.startsWith('F-')) {
-                        baseImg = '/assets/omega-f.png';
+                        baseImg = omegaFImg;
                         borderColor = 'border-purple-400';
                         overlayColor = 'bg-purple-500/20';
                     }
