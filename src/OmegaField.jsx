@@ -4,43 +4,40 @@ import React, { useState } from 'react';
 // Box 600x600. Center 300,300. Radius 300.
 
 const MARKERS = [
-    { label: 'A', color: 'bg-red-500', pos: 'top-[16.7%] left-1/2 -translate-x-1/2 -translate-y-1/2' },
-    { label: 'B', color: 'bg-yellow-500', pos: 'top-1/2 right-[16.7%] translate-x-1/2 -translate-y-1/2' },
-    { label: 'C', color: 'bg-blue-500', pos: 'bottom-[16.7%] left-1/2 -translate-x-1/2 translate-y-1/2' },
-    { label: 'D', color: 'bg-purple-500', pos: 'top-1/2 left-[16.7%] -translate-x-1/2 -translate-y-1/2' },
+    { label: 'A', color: 'bg-red-500', pos: 'top-[15.6%] left-1/2 -translate-x-1/2 -translate-y-1/2', x: 50, y: 15.6 },
+    { label: 'B', color: 'bg-yellow-500', pos: 'top-1/2 right-[15.6%] translate-x-1/2 -translate-y-1/2', x: 84.4, y: 50 },
+    { label: 'C', color: 'bg-blue-500', pos: 'bottom-[15.6%] left-1/2 -translate-x-1/2 translate-y-1/2', x: 50, y: 84.4 },
+    { label: 'D', color: 'bg-purple-500', pos: 'top-1/2 left-[15.6%] -translate-x-1/2 -translate-y-1/2', x: 15.6, y: 50 },
 
-    { label: '1', color: 'bg-red-500', pos: 'top-[26.4%] right-[26.4%] translate-x-1/2 -translate-y-1/2' },
-    { label: '2', color: 'bg-yellow-500', pos: 'bottom-[26.4%] right-[26.4%] translate-x-1/2 translate-y-1/2' },
-    { label: '3', color: 'bg-blue-500', pos: 'bottom-[26.4%] left-[26.4%] -translate-x-1/2 translate-y-1/2' },
-    { label: '4', color: 'bg-purple-500', pos: 'top-[26.4%] left-[26.4%] -translate-x-1/2 -translate-y-1/2' },
+    { label: '1', color: 'bg-red-500', pos: 'top-[25.7%] right-[25.7%] translate-x-1/2 -translate-y-1/2', x: 74.3, y: 25.7 },
+    { label: '2', color: 'bg-yellow-500', pos: 'bottom-[25.7%] right-[25.7%] translate-x-1/2 translate-y-1/2', x: 74.3, y: 74.3 },
+    { label: '3', color: 'bg-blue-500', pos: 'bottom-[25.7%] left-[25.7%] -translate-x-1/2 translate-y-1/2', x: 25.7, y: 74.3 },
+    { label: '4', color: 'bg-purple-500', pos: 'top-[25.7%] left-[25.7%] -translate-x-1/2 -translate-y-1/2', x: 25.7, y: 25.7 },
 ];
 
 const SLOTS = [
-    // Center slot is hidden from grid-based rendering because it's now a global overlay, 
-    // BUT we need it for click interaction in Editor.
-    // So we keep it but it renders differently.
-    { id: 'center', pos: 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' },
-    { id: 'ne', pos: 'top-[32.3%] right-[32.3%] translate-x-1/2 -translate-y-1/2' },
-    { id: 'se', pos: 'bottom-[32.3%] right-[32.3%] translate-x-1/2 translate-y-1/2' },
-    { id: 'sw', pos: 'bottom-[32.3%] left-[32.3%] -translate-x-1/2 translate-y-1/2' },
-    { id: 'nw', pos: 'top-[32.3%] left-[32.3%] -translate-x-1/2 -translate-y-1/2' },
+    { id: 'center', pos: 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2', x: 50, y: 50 },
+    { id: 'ne', pos: 'top-[31%] right-[31%] translate-x-1/2 -translate-y-1/2', x: 69, y: 31 },
+    { id: 'se', pos: 'bottom-[31%] right-[31%] translate-x-1/2 translate-y-1/2', x: 69, y: 69 },
+    { id: 'sw', pos: 'bottom-[31%] left-[31%] -translate-x-1/2 translate-y-1/2', x: 31, y: 69 },
+    { id: 'nw', pos: 'top-[31%] left-[31%] -translate-x-1/2 -translate-y-1/2', x: 31, y: 31 },
 ];
 
 const ANSWER_SPOTS = [
-    { id: 'c_n', label: 'C-N', pos: 'top-[45%] left-1/2 -translate-x-1/2 -translate-y-2/3' },
-    { id: 'c_e', label: 'C-E', pos: 'top-1/2 right-[45%] translate-x-2/3 -translate-y-1/2' },
-    { id: 'c_s', label: 'C-S', pos: 'bottom-[45%] left-1/2 -translate-x-1/2 translate-y-2/3' },
-    { id: 'c_w', label: 'C-W', pos: 'top-1/2 left-[45%] -translate-x-2/3 -translate-y-1/2' },
+    { id: 'c_n', label: 'C-N', pos: 'top-[43%] left-1/2 -translate-x-1/2 -translate-y-1/2' },
+    { id: 'c_e', label: 'C-E', pos: 'top-1/2 right-[43%] translate-x-1/2 -translate-y-1/2' },
+    { id: 'c_s', label: 'C-S', pos: 'bottom-[43%] left-1/2 -translate-x-1/2 translate-y-1/2' },
+    { id: 'c_w', label: 'C-W', pos: 'top-1/2 left-[43%] -translate-x-1/2 -translate-y-1/2' },
 
-    { id: 'm_in_n', label: 'In-N', pos: 'top-[24%] left-1/2 -translate-x-1/2 -translate-y-1/2' },
-    { id: 'm_in_e', label: 'In-E', pos: 'top-1/2 right-[24%] translate-x-1/2 -translate-y-1/2' },
-    { id: 'm_in_s', label: 'In-S', pos: 'bottom-[24%] left-1/2 -translate-x-1/2 translate-y-1/2' },
-    { id: 'm_in_w', label: 'In-W', pos: 'top-1/2 left-[24%] -translate-x-1/2 -translate-y-1/2' },
+    { id: 'm_in_n', label: 'In-N', pos: 'top-[23.5%] left-1/2 -translate-x-1/2 -translate-y-1/2' },
+    { id: 'm_in_e', label: 'In-E', pos: 'top-1/2 right-[23.5%] translate-x-1/2 -translate-y-1/2' },
+    { id: 'm_in_s', label: 'In-S', pos: 'bottom-[23.5%] left-1/2 -translate-x-1/2 translate-y-1/2' },
+    { id: 'm_in_w', label: 'In-W', pos: 'top-1/2 left-[23.5%] -translate-x-1/2 -translate-y-1/2' },
 
-    { id: 'm_out_n', label: 'Out-N', pos: 'top-[9%] left-1/2 -translate-x-1/2 -translate-y-1/2' },
-    { id: 'm_out_e', label: 'Out-E', pos: 'top-1/2 right-[9%] translate-x-1/2 -translate-y-1/2' },
-    { id: 'm_out_s', label: 'Out-S', pos: 'bottom-[9%] left-1/2 -translate-x-1/2 translate-y-1/2' },
-    { id: 'm_out_w', label: 'Out-W', pos: 'top-1/2 left-[9%] -translate-x-1/2 -translate-y-1/2' },
+    { id: 'm_out_n', label: 'Out-N', pos: 'top-[8%] left-1/2 -translate-x-1/2 -translate-y-1/2' },
+    { id: 'm_out_e', label: 'Out-E', pos: 'top-1/2 right-[8%] translate-x-1/2 -translate-y-1/2' },
+    { id: 'm_out_s', label: 'Out-S', pos: 'bottom-[8%] left-1/2 -translate-x-1/2 translate-y-1/2' },
+    { id: 'm_out_w', label: 'Out-W', pos: 'top-1/2 left-[8%] -translate-x-1/2 -translate-y-1/2' },
 ];
 
 // Weapon overlays (using PNG assets)
@@ -59,31 +56,111 @@ const WeaponIcons = {
     )
 };
 
-export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, onAnswerSpotClick, selectedSpot = null, previousAnswerSpot = null, correctSpots = [] }) {
+export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, onAnswerSpotClick, selectedSpot = null, previousAnswerSpot = null, correctSpots = [], showAttacks = false }) {
 
     // Find Center Unit Type
     const centerUnit = placedUnits.find(u => u.position === 'center');
     const centerType = centerUnit ? centerUnit.type : 'Vertical'; // Default Vertical visual if missing
 
+    // Helper to get coords by slot id
+    const getSlotCoords = (id) => {
+        const s = SLOTS.find(slot => slot.id === id);
+        return s ? { x: s.x, y: s.y } : { x: 50, y: 50 };
+    };
+
     return (
         <div className="relative w-full max-w-[440px] shrink-0 mx-auto my-4 transition-all" style={{ aspectRatio: '1/1' }}>
 
-            {/* 0. Map-wide Safe Zone Overlay */}
-            <div className="absolute inset-0 pointer-events-none z-0 opacity-50 overflow-hidden rounded-full">
-                <svg viewBox="0 0 100 100" className="w-full h-full block">
-                    {centerType === 'Vertical' ? (
-                        <path d="M50 50 L100 -50 V150 L50 50 L0 150 V-50 L50 50Z" fill="url(#gradSafe)" pointerEvents="none" />
-                    ) : (
-                        <path d="M50 50 L-50 0 H150 L50 50 L150 100 H-50 L50 50Z" fill="url(#gradSafe)" pointerEvents="none" />
-                    )}
-                    <defs>
-                        <radialGradient id="gradSafe" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                            <stop offset="0%" stopColor="#2493fbff" stopOpacity="0.8" />
-                            <stop offset="100%" stopColor="#2493fbff" stopOpacity="0.2" />
-                        </radialGradient>
-                    </defs>
-                </svg>
-            </div>
+            {/* 0.5 Attack Range Layer (Includes Center Boss) */}
+            {showAttacks && (
+                <div className="absolute inset-0 z-0 pointer-events-none rounded-full overflow-hidden">
+                    <svg viewBox="0 0 100 100" className="w-full h-full">
+                        {placedUnits.map((unit, idx) => {
+                            // Don't show attacks for ghost units (P1 in P2)
+                            // But wait, the user said "2회차엔 2회차 장판만 유효".
+                            // If P1 unit is present as ghost, its attack is gone.
+                            if (unit.isGhost) return null;
+
+                            const { x, y } = getSlotCoords(unit.position);
+                            const unitVal = 6.25; // 1 Interval = 50 / 8 = 6.25.
+
+                            const radiusSword = 25; // M-Sword
+                            const beamWidth = 4 * unitVal; // 25
+
+                            // Attack styling
+                            const attackFill_F = "rgba(168, 85, 247, .5)"; // Purple
+                            const attackFill_M = "rgba(239, 68, 68, .5)"; // Red
+                            const centerAttackFill = "rgba(59, 130, 246, .5)"; // Blue
+                            const attackStroke = "none";
+
+                            if (unit.position === 'center') {
+                                const isVertical = unit.type === 'Vertical';
+                                const r = 200; // Large enough to cover map
+                                const toRad = deg => deg * Math.PI / 180;
+                                const getPt = deg => `${50 + r * Math.cos(toRad(deg))} ${50 + r * Math.sin(toRad(deg))}`;
+
+                                if (isVertical) {
+                                    // North/South 120deg (N: -90, range -150 to -30. S: 90, range 30 to 150)
+                                    return (
+                                        <path key={idx}
+                                            d={`M50 50 L${getPt(-60)} L${getPt(60)} Z M50 50 L${getPt(120)} L${getPt(240)} Z`}
+                                            fill={centerAttackFill} stroke={attackStroke}
+                                        />
+                                    );
+                                } else {
+                                    // East/West 120deg (E: 0, range -60 to 60. W: 180, range 120 to 240)
+                                    return (
+                                        <path key={idx}
+                                            d={`M50 50 L${getPt(-150)} L${getPt(-30)} Z M50 50 L${getPt(30)} L${getPt(150)} Z`}
+                                            fill={centerAttackFill} stroke={attackStroke}
+                                        />
+                                    );
+                                }
+                            }
+
+                            if (unit.type === 'M-Sword') {
+                                return (
+                                    <circle key={idx} cx={x} cy={y} r={radiusSword} fill={attackFill_M} stroke={attackStroke} />
+                                );
+                            }
+                            if (unit.type === 'M-Shield') {
+                                // Donut
+                                return (
+                                    <path key={idx}
+                                        d={`M-100 -100 H300 V300 H-100 Z M ${x} ${y} m -${radiusSword},0 a ${radiusSword},${radiusSword} 0 1,0 ${radiusSword * 2},0 a ${radiusSword},${radiusSword} 0 1,0 -${radiusSword * 2},0`}
+                                        fill={attackFill_M}
+                                        fillRule="evenodd"
+                                        stroke={attackStroke}
+                                    />
+                                );
+                            }
+                            if (unit.type === 'F-Staff') {
+                                const angle = Math.atan2(50 - y, 50 - x) * 180 / Math.PI;
+                                return (
+                                    <g key={idx} transform={`translate(${x}, ${y}) rotate(${angle})`}>
+                                        <rect x={-100} y={-beamWidth / 2} width={300} height={beamWidth} fill={attackFill_F} stroke={attackStroke} />
+                                        <rect x={-beamWidth / 2} y={-100} width={beamWidth} height={200} fill={attackFill_F} stroke={attackStroke} />
+                                    </g>
+                                );
+                            }
+                            if (unit.type === 'F-Legs') {
+                                const angle = Math.atan2(50 - y, 50 - x) * 180 / Math.PI;
+                                return (
+                                    <g key={idx} transform={`translate(${x}, ${y}) rotate(${angle})`}>
+                                        <path
+                                            d={`M-200 -200 H400 V400 H-200 Z M-150 ${-beamWidth / 2} v${beamWidth} h400 v-${beamWidth} z`}
+                                            fill={attackFill_F}
+                                            fillRule="evenodd"
+                                            stroke={attackStroke}
+                                        />
+                                    </g>
+                                );
+                            }
+                            return null;
+                        })}
+                    </svg>
+                </div>
+            )}
 
             {/* 1. Field Boundary & concentric guides (8 rings) */}
             {Array.from({ length: 8 }).map((_, i) => (
@@ -101,8 +178,8 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
 
             {/* 2. Markers */}
             {MARKERS.map((m) => (
-                <div key={m.label} className={`absolute w-[12%] aspect-square rounded-full ${m.color} flex items-center justify-center text-black font-bold text-lg md:text-2xl shadow-lg border-2 border-white/20 z-10 ${m.pos}`}>
-                    {m.label}
+                <div key={m.label} className={`absolute w-[7.5%] aspect-square rounded-full ${m.color} flex items-center justify-center text-black font-bold text-sm md:text-lg shadow-lg border-2 border-white/20 z-10 ${m.pos}`}>
+                    <span className="-translate-y-[7%]">{m.label}</span>
                 </div>
             ))}
 
@@ -110,7 +187,7 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
             {showAnswerSpots && ANSWER_SPOTS.map((s) => {
                 let bgStyle = 'bg-white/10 border-white/30 hover:bg-white/30 hover:border-white';
                 if (selectedSpot === s.id) bgStyle = 'bg-blue-500 border-blue-300';
-                if (previousAnswerSpot === s.id) bgStyle = 'bg-slate-700/80 border-slate-500 shadow-[0_0_10px_rgba(255,255,255,0.3)] scale-110'; // Highlight P1 Answer
+                if (previousAnswerSpot === s.id) bgStyle = 'bg-yellow-500/30 border-yellow-400 shadow-[0_0_20px_rgba(253,224,71,0.5)] scale-110 ring-2 ring-yellow-400/50'; // Highlight P1 Answer with Yellow Glow
 
                 const isCorrect = correctSpots && correctSpots.includes(s.id);
                 const isP1 = previousAnswerSpot === s.id;
@@ -119,11 +196,12 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
                     <div
                         key={s.id}
                         onClick={() => onAnswerSpotClick && onAnswerSpotClick(s.id)}
-                        className={`absolute w-[14%] aspect-square rounded-full border-2 cursor-pointer transition-all z-20 flex items-center justify-center
+                        className={`absolute w-[7.5%] aspect-square rounded-full border-2 cursor-pointer transition-all z-20 flex items-center justify-center
+                            after:absolute after:-inset-6 after:content-[''] after:rounded-full
                             ${s.pos} ${bgStyle}`}
                     >
                         {selectedSpot === s.id && <span className="text-white font-bold text-xs">SELF</span>}
-                        {isP1 && !selectedSpot && <span className="text-slate-300 font-bold text-xs opacity-70">1st</span>}
+                        {isP1 && !selectedSpot && <span className="text-yellow-200 font-bold text-sm drop-shadow-md">1st</span>}
                         {isCorrect && <span className="absolute inset-0 rounded-full border-4 border-green-500 animate-pulse"></span>}
                     </div>
                 );
@@ -136,23 +214,30 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
                 const isCenter = slot.id === 'center';
 
                 if (isCenter) {
+                    const isVert = unit?.type === 'Vertical';
                     return (
                         <div
                             key={slot.id}
                             onClick={() => !isPassive && onSlotClick && onSlotClick(slot.id)}
-                            className={`absolute w-[25%] aspect-square flex items-center justify-center z-15
+                            className={`absolute w-[18.75%] aspect-square flex items-center justify-center z-15
                                     ${slot.pos} 
-                                    ${!isPassive ? 'cursor-pointer' : ''}
+                                    ${!isPassive ? 'cursor-pointer after:absolute after:-inset-4 after:content-[\'\']' : ''}
                                     `}
                         >
                             {/* Central Boss Image */}
                             <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-white/50 bg-black/50 shadow-[0_0_15px_rgba(255,255,255,0.3)]">
                                 <img src="/assets/omega-final.png" alt="Omega Final" className="w-full h-full object-cover" />
-                                {/* Optional overlay for Type indication if image doesn't differ */}
+
+                                {/* Center Attack Indicator (Monitor Projection) */}
+                                {/* Vertical Type -> Vertical Bar (Blue-Black-Blue) */}
+                                {/* Horizontal Type -> Horizontal Bar */}
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <span className="bg-black/60 text-white text-[10px] px-1 rounded font-mono border border-white/20">
-                                        {unit ? (unit.type === 'Vertical' ? 'V' : 'H') : 'V'}
-                                    </span>
+                                    <div className={`transition-all bg-slate-900 border-blue-400 shadow-[0_0_20px_#3b82f6] opacity-90
+                                        ${isVert
+                                            ? 'w-[28%] h-full border-x-[6px] border-y-0'
+                                            : 'w-full h-[28%] border-y-[6px] border-x-0'
+                                        }
+                                    `}></div>
                                 </div>
                             </div>
                         </div>
@@ -183,12 +268,12 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
                     <div
                         key={slot.id}
                         onClick={() => !isPassive && onSlotClick && onSlotClick(slot.id)}
-                        className={`absolute w-[16%] aspect-square rounded-full flex items-center justify-center transition-all z-10
+                        className={`absolute w-[12.5%] aspect-square rounded-full flex items-center justify-center transition-all z-10
                                 ${slot.pos} 
                                 ${!unit ? 'border-2 border-dashed border-slate-600/50' : ''}
-                                ${!isPassive && !unit ? 'cursor-pointer hover:border-white/50' : ''}
+                                ${!isPassive && !unit ? 'cursor-pointer hover:border-white/50 after:absolute after:-inset-4 after:content-[\'\']' : ''}
                                 ${isPassive && !unit ? 'opacity-0' : ''} 
-                                ${unit?.isGhost ? 'opacity-40 grayscale' : ''}
+                                ${unit?.isGhost ? 'opacity-80' : ''}
                                 `}
                     >
                         {unit && baseImg ? (

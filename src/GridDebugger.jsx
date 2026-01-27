@@ -201,6 +201,7 @@ export default function GridDebugger() {
                                 placedUnits={omegaProblem.data.units}
                                 correctSpots={omegaProblem.data.correctSpots}
                                 showAnswerSpots={true}
+                                showAttacks={true}
                             />
                             <div className="mt-4 text-center px-4">
                                 <h3 className="font-bold text-lg mb-1">{omegaProblem.title}</h3>

@@ -294,6 +294,7 @@ export default function QuizMode() {
                 selectedSpot={userSelectedSpot}
                 previousAnswerSpot={currentSet.p1Answer}
                 correctSpots={correctSpots}
+                showAttacks={omegaState === 'p1_feedback' || omegaState === 'set_fail' || omegaState === 'set_clear'}
             />
         );
     };
@@ -312,13 +313,13 @@ export default function QuizMode() {
                             <button onClick={() => { setSubMode('omega_quiz'); startOmegaSet(); }}
                                 className="group relative px-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-red-500/20 hover:-translate-y-1 transition-all overflow-hidden">
                                 <span className="relative z-10 flex items-center justify-center gap-2">
-                                    ⚔️ Omega Protocol
+                                    ⚔️ Code: Omega
                                 </span>
                             </button>
                             <button onClick={startArrowQuiz}
                                 className="group relative px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all overflow-hidden">
                                 <span className="relative z-10 flex items-center justify-center gap-2">
-                                    🏹 Arrow Mechanics
+                                    🏹 Cosmo Arrow
                                 </span>
                             </button>
                         </div>
