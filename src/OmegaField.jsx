@@ -27,10 +27,10 @@ const SLOTS = [
 ];
 
 const ANSWER_SPOTS = [
-    { id: 'c_n', label: 'C-N', pos: 'top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2' },
-    { id: 'c_e', label: 'C-E', pos: 'top-1/2 right-[45%] translate-x-1/2 -translate-y-1/2' },
-    { id: 'c_s', label: 'C-S', pos: 'bottom-[45%] left-1/2 -translate-x-1/2 translate-y-1/2' },
-    { id: 'c_w', label: 'C-W', pos: 'top-1/2 left-[45%] -translate-x-1/2 -translate-y-1/2' },
+    { id: 'c_n', label: 'C-N', pos: 'top-[45%] left-1/2 -translate-x-1/2 -translate-y-2/3' },
+    { id: 'c_e', label: 'C-E', pos: 'top-1/2 right-[45%] translate-x-2/3 -translate-y-1/2' },
+    { id: 'c_s', label: 'C-S', pos: 'bottom-[45%] left-1/2 -translate-x-1/2 translate-y-2/3' },
+    { id: 'c_w', label: 'C-W', pos: 'top-1/2 left-[45%] -translate-x-2/3 -translate-y-1/2' },
 
     { id: 'm_in_n', label: 'In-N', pos: 'top-[24%] left-1/2 -translate-x-1/2 -translate-y-1/2' },
     { id: 'm_in_e', label: 'In-E', pos: 'top-1/2 right-[24%] translate-x-1/2 -translate-y-1/2' },
@@ -43,82 +43,65 @@ const ANSWER_SPOTS = [
     { id: 'm_out_w', label: 'Out-W', pos: 'top-1/2 left-[9%] -translate-x-1/2 -translate-y-1/2' },
 ];
 
-// SVG Icons
-const Icons = {
+// Weapon overlays (using PNG assets)
+const WeaponIcons = {
     'F-Staff': (
-        <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-[0_0_8px_rgba(216,180,254,0.8)]">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="none" stroke="#d8b4fe" strokeWidth="2" />
-            <path d="M12 6v12M8 10l4-4 4 4" stroke="#d8b4fe" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="12" cy="7" r="1.5" fill="#d8b4fe" />
-        </svg>
+        <img src="/assets/staff.png" alt="Staff" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
     ),
     'F-Legs': (
-        <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-[0_0_8px_rgba(216,180,254,0.8)]">
-            <path d="M7 4h10v2H7zM7 8h10v2H7z" fill="#d8b4fe" opacity="0.5" />
-            <path d="M9 12l-2 8 5-2 5 2-2-8H9z" stroke="#d8b4fe" strokeWidth="2" fill="none" />
-        </svg>
+        <img src="/assets/knife.png" alt="Legs" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
     ),
     'M-Sword': (
-        <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-[0_0_8px_rgba(147,197,253,0.8)]">
-            <path d="M11 2h2v14h-2z" fill="#93c5fd" />
-            <path d="M8 16h8v2H8z" fill="#60a5fa" />
-            <path d="M12 22l-2-4h4z" fill="#93c5fd" />
-        </svg>
+        <img src="/assets/sword.png" alt="Sword" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
     ),
     'M-Shield': (
-        <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-[0_0_8px_rgba(147,197,253,0.8)]">
-            <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" stroke="#93c5fd" strokeWidth="2" fill="none" />
-            <path d="M12 4v16M5 9h14" stroke="#93c5fd" strokeWidth="1" strokeOpacity="0.5" />
-        </svg>
+        <img src="/assets/shield.png" alt="Shield" className="w-4/5 object-contain drop-shadow-md" style={{ filter: 'brightness(0) invert(1)' }} />
     )
 };
 
-export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, onAnswerSpotClick, selectedSpot = null, correctSpots = [] }) {
+export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, onAnswerSpotClick, selectedSpot = null, previousAnswerSpot = null, correctSpots = [] }) {
 
     // Find Center Unit Type
     const centerUnit = placedUnits.find(u => u.position === 'center');
     const centerType = centerUnit ? centerUnit.type : 'Vertical'; // Default Vertical visual if missing
 
     return (
-        <div className="relative w-[600px] h-[600px] m-8">
+        <div className="relative w-full max-w-[440px] shrink-0 mx-auto my-4 transition-all" style={{ aspectRatio: '1/1' }}>
 
-            {/* 0. Map-wide Safe Zone Overlay (Controlled by Center Unit) */}
+            {/* 0. Map-wide Safe Zone Overlay */}
             <div className="absolute inset-0 pointer-events-none z-0 opacity-50 overflow-hidden rounded-full">
-                {/* 
-                    Vertical Safe: Hourglass shape (Wide North/South)
-                    Horizontal Safe: Bowtie shape (Wide East/West)
-                    We can use conical gradients or SVG paths.
-                */}
-                <svg viewBox="0 0 100 100" className="w-full h-full">
+                <svg viewBox="0 0 100 100" className="w-full h-full block">
                     {centerType === 'Vertical' ? (
-                        /* Vertical Safe (Gold North/South) - Danger is E/W */
-                        <path d="M50 50 L0 0 H100 L50 50 L100 100 H0 L50 50Z" fill="url(#gradSafe)" pointerEvents="none" />
-                        // Wait, North/South safe means Triangle Up and Triangle Down.
-                        // Path above: 50,50 -> 0,0 (TL) -> 100,0 (TR) -> 50,50 ... This is top triangle (North).
-                        // Then 50,50 -> 100,100 (BR) -> 0,100 (BL) -> 50,50 ... This is bottom triangle (South).
-                        // Correct.
+                        <path d="M50 50 L100 -50 V150 L50 50 L0 150 V-50 L50 50Z" fill="url(#gradSafe)" pointerEvents="none" />
                     ) : (
-                        /* Horizontal Safe (Gold East/West) - Danger is N/S */
-                        <path d="M50 50 L100 0 V100 L50 50 L0 100 V0 L50 50Z" fill="url(#gradSafe)" pointerEvents="none" />
-                        // 50,50 -> 100,0 (TR) -> 100,100 (BR) -> 50,50 ... Right triangle (East)
-                        // 50,50 -> 0,100 (BL) -> 0,0 (TL) -> 50,50 ... Left triangle (West)
-                        // Correct.
+                        <path d="M50 50 L-50 0 H150 L50 50 L150 100 H-50 L50 50Z" fill="url(#gradSafe)" pointerEvents="none" />
                     )}
                     <defs>
                         <radialGradient id="gradSafe" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                            <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.4" />
-                            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.1" />
+                            <stop offset="0%" stopColor="#2493fbff" stopOpacity="0.8" />
+                            <stop offset="100%" stopColor="#2493fbff" stopOpacity="0.2" />
                         </radialGradient>
                     </defs>
                 </svg>
             </div>
 
-            {/* 1. Field Boundary Circle */}
-            <div className="absolute inset-0 rounded-full border-4 border-slate-600 bg-transparent shadow-2xl z-0 pointer-events-none"></div>
+            {/* 1. Field Boundary & concentric guides (8 rings) */}
+            {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                    key={i}
+                    className={`absolute rounded-full border border-slate-700/50 z-0 pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
+                        ${i === 0 ? 'border-4 border-slate-600 w-full h-full shadow-2xl' : ''}
+                    `}
+                    style={{
+                        width: `${100 - (i * (100 / 8))}%`,
+                        height: `${100 - (i * (100 / 8))}%`
+                    }}
+                ></div>
+            ))}
 
             {/* 2. Markers */}
             {MARKERS.map((m) => (
-                <div key={m.label} className={`absolute w-12 h-12 rounded-full ${m.color} flex items-center justify-center text-black font-bold text-2xl shadow-lg border-2 border-white/20 z-10 ${m.pos}`}>
+                <div key={m.label} className={`absolute w-[12%] aspect-square rounded-full ${m.color} flex items-center justify-center text-black font-bold text-lg md:text-2xl shadow-lg border-2 border-white/20 z-10 ${m.pos}`}>
                     {m.label}
                 </div>
             ))}
@@ -127,17 +110,20 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
             {showAnswerSpots && ANSWER_SPOTS.map((s) => {
                 let bgStyle = 'bg-white/10 border-white/30 hover:bg-white/30 hover:border-white';
                 if (selectedSpot === s.id) bgStyle = 'bg-blue-500 border-blue-300';
+                if (previousAnswerSpot === s.id) bgStyle = 'bg-slate-700/80 border-slate-500 shadow-[0_0_10px_rgba(255,255,255,0.3)] scale-110'; // Highlight P1 Answer
 
                 const isCorrect = correctSpots && correctSpots.includes(s.id);
+                const isP1 = previousAnswerSpot === s.id;
 
                 return (
                     <div
                         key={s.id}
                         onClick={() => onAnswerSpotClick && onAnswerSpotClick(s.id)}
-                        className={`absolute w-14 h-14 rounded-full border-2 cursor-pointer transition-all z-20 flex items-center justify-center
+                        className={`absolute w-[14%] aspect-square rounded-full border-2 cursor-pointer transition-all z-20 flex items-center justify-center
                             ${s.pos} ${bgStyle}`}
                     >
                         {selectedSpot === s.id && <span className="text-white font-bold text-xs">SELF</span>}
+                        {isP1 && !selectedSpot && <span className="text-slate-300 font-bold text-xs opacity-70">1st</span>}
                         {isCorrect && <span className="absolute inset-0 rounded-full border-4 border-green-500 animate-pulse"></span>}
                     </div>
                 );
@@ -149,43 +135,76 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
                 const isPassive = showAnswerSpots;
                 const isCenter = slot.id === 'center';
 
-                // If center, we only show the clickable area in Editor mode, 
-                // but the VISUAL is handled by the global overlay (Layer 0).
-                // In Editor mode, clicking center toggles V/H.
-                // We should show a label or icon for feedback in Editor maybe?
-                // The overlay changes instantly so that's good feedback.
-                // We'll keep the slot transparent but clickable for center.
-
                 if (isCenter) {
                     return (
                         <div
                             key={slot.id}
                             onClick={() => !isPassive && onSlotClick && onSlotClick(slot.id)}
-                            className={`absolute w-32 h-32 flex items-center justify-center z-10
-                                ${slot.pos} 
-                                ${!isPassive ? 'cursor-pointer hover:bg-white/10 rounded-full' : ''}
-                                `}
+                            className={`absolute w-[25%] aspect-square flex items-center justify-center z-15
+                                    ${slot.pos} 
+                                    ${!isPassive ? 'cursor-pointer' : ''}
+                                    `}
                         >
-                            {/* Optional: Small Label to verify type if overlay is subtle? */}
-                            {!isPassive && <span className="text-white/50 text-xs font-mono">{unit ? unit.type : 'Clk'}</span>}
+                            {/* Central Boss Image */}
+                            <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-white/50 bg-black/50 shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                                <img src="/assets/omega-final.png" alt="Omega Final" className="w-full h-full object-cover" />
+                                {/* Optional overlay for Type indication if image doesn't differ */}
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <span className="bg-black/60 text-white text-[10px] px-1 rounded font-mono border border-white/20">
+                                        {unit ? (unit.type === 'Vertical' ? 'V' : 'H') : 'V'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     );
                 }
 
                 // Normal Slots (NE/SE/SW/NW)
+
+                // Determine base image (M or F) and Overlay
+                let baseImg = null;
+                let borderColor = 'border-white/40';
+                let overlayColor = 'bg-transparent';
+
+                if (unit) {
+                    if (unit.type.startsWith('M-')) {
+                        baseImg = '/assets/omega-m.png';
+                        borderColor = 'border-blue-400';
+                        overlayColor = 'bg-blue-500/20';
+                    }
+                    else if (unit.type.startsWith('F-')) {
+                        baseImg = '/assets/omega-f.png';
+                        borderColor = 'border-purple-400';
+                        overlayColor = 'bg-purple-500/20';
+                    }
+                }
+
                 return (
                     <div
                         key={slot.id}
                         onClick={() => !isPassive && onSlotClick && onSlotClick(slot.id)}
-                        className={`absolute w-24 h-24 rounded-lg flex items-center justify-center transition-colors z-10
-                            ${slot.pos} 
-                            ${!unit ? 'border-2 border-dashed border-slate-600/50' : ''}
-                            ${!isPassive && !unit ? 'cursor-pointer hover:border-white/50' : ''}
-                            ${isPassive && !unit ? 'opacity-0' : ''} 
-                            `}
+                        className={`absolute w-[16%] aspect-square rounded-full flex items-center justify-center transition-all z-10
+                                ${slot.pos} 
+                                ${!unit ? 'border-2 border-dashed border-slate-600/50' : ''}
+                                ${!isPassive && !unit ? 'cursor-pointer hover:border-white/50' : ''}
+                                ${isPassive && !unit ? 'opacity-0' : ''} 
+                                ${unit?.isGhost ? 'opacity-40 grayscale' : ''}
+                                `}
                     >
-                        {unit && Icons[unit.type] ? (
-                            Icons[unit.type]
+                        {unit && baseImg ? (
+                            <div className="relative w-full h-full">
+                                {/* Base Image Container */}
+                                <div className={`w-full h-full rounded-full overflow-hidden bg-white/10 border-2 ${borderColor} shadow-lg relative`}>
+                                    <img src={baseImg} alt={unit.type} className="w-full h-full object-cover" />
+                                    {/* Color Overlay */}
+                                    <div className={`absolute inset-0 ${overlayColor} mix-blend-overlay`}></div>
+                                </div>
+
+                                {/* Weapon Icon Overlay (Right Side) */}
+                                <div className="absolute top-1/2 -right-2 -translate-y-1/2 w-8 h-8 bg-slate-900/80 rounded-full border border-white/30 flex items-center justify-center shadow-md p-1">
+                                    {WeaponIcons[unit.type]}
+                                </div>
+                            </div>
                         ) : (
                             !isPassive && <span className="text-slate-700 text-xs">+</span>
                         )}

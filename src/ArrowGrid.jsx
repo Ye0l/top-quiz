@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function ArrowGrid({ activeIndices, isInteractive = false, onCellClick }) {
     return (
-        <div className="relative w-[600px] h-[600px] bg-slate-900 border-4 border-slate-700 rounded-lg shadow-2xl">
+        <div className="relative w-full max-w-[440px] shrink-0 bg-slate-900 border-4 border-slate-700 rounded-lg shadow-2xl mx-auto" style={{ aspectRatio: '1/1' }}>
 
             {/* 1. Inscribed Circle */}
             <div className="absolute inset-0 m-1 rounded-full border-2 border-slate-600 opacity-30 pointer-events-none">
