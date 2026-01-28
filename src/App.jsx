@@ -1,11 +1,16 @@
 import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import QuizMode from './QuizMode';
+import RankingPage from './pages/RankingPage';
+import { UserProvider } from './contexts/UserContext';
+import UserIdentity from './components/UserIdentity';
 
 export default function App() {
     useEffect(() => {
         const handleContextMenu = (e) => e.preventDefault();
         const handleDragStart = (e) => e.preventDefault();
 
+        // Prevent default browser actions for game feel
         document.addEventListener('contextmenu', handleContextMenu);
         document.addEventListener('dragstart', handleDragStart);
 
@@ -16,11 +21,21 @@ export default function App() {
     }, []);
 
     return (
-        <div className="relative h-full flex flex-col bg-slate-950 overflow-hidden">
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto px-1 scroll-smooth">
-                <QuizMode />
-            </div>
-        </div>
+        <UserProvider>
+            <BrowserRouter>
+                <div className="relative h-full min-h-screen flex flex-col bg-slate-950 overflow-hidden text-white font-sans selection:bg-blue-500/30">
+                    
+                    {/* Floating Identity Widget - Top Left to avoid overlap with Game UI (Timer/Steps usually on Right) */}
+                    <div className="absolute top-4 left-4 z-50">
+                        <UserIdentity />
+                    </div>
+
+                    <Routes>
+                        <Route path="/" element={<QuizMode />} />
+                        <Route path="/ranking" element={<RankingPage />} />
+                    </Routes>
+                </div>
+            </BrowserRouter>
+        </UserProvider>
     );
 }

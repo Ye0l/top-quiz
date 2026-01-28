@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import OmegaField from './OmegaField';
 import ArrowGrid from './ArrowGrid';
+import MiniRanking from './components/MiniRanking';
 import { patterns } from './patterns';
 import { getNextOmegaProblem } from './data/omegaProblems';
+import { Link } from 'react-router-dom';
+import { useUser } from './contexts/UserContext';
+import { addRankingEntry } from './utils/rankingService';
+import { Trophy } from 'lucide-react';
 
 export default function QuizMode() {
+    const { userProfile } = useUser();
     const [subMode, setSubMode] = useState('menu'); // menu, omega_quiz, arrow_quiz
+    const [rankRefresh, setRankRefresh] = useState(0);
 
     // --- Omega Quiz State ---
     const [omegaState, setOmegaState] = useState('idle'); // idle, p1_playing, p1_feedback, p2_playing, p2_feedback, set_clear, set_fail
@@ -255,12 +262,16 @@ export default function QuizMode() {
                 setFeedbackMsg('SET CLEARED!');
                 const timeTaken = Date.now() - startTime;
                 updateStats('clear', timeTaken);
+                // Submit Ranking (Normal Mode Clear)
+                addRankingEntry('omega_quiz', userProfile.nickname, userProfile.job, timeTaken).then(() => setRankRefresh(prev => prev + 1));
             }
         } else {
             // Wrong -> Fail
             if (omegaState === 'unlimited_playing') {
                 setOmegaState('unlimited_fail');
                 setFeedbackMsg('GAME OVER');
+                // Submit Ranking (Unlimited Mode Fail)
+                addRankingEntry('omega_unlimited', userProfile.nickname, userProfile.job, unlimitedStats.level).then(() => setRankRefresh(prev => prev + 1));
             } else {
                 setOmegaState('set_fail');
                 setFeedbackMsg('FAILURE! Incorrect Spot.');
@@ -388,6 +399,8 @@ export default function QuizMode() {
                     if (omegaState === 'unlimited_playing') {
                         setOmegaState('unlimited_fail');
                         setFeedbackMsg('TIME LIMIT!');
+                        // Submit Ranking (Unlimited Time Limit)
+                        addRankingEntry('omega_unlimited', userProfile.nickname, userProfile.job, unlimitedStats.level).then(() => setRankRefresh(prev => prev + 1));
                     } else {
                         setOmegaState('set_fail');
                         setFeedbackMsg('TIME LIMIT EXCEEDED!');
@@ -546,6 +559,10 @@ export default function QuizMode() {
             status: result,
             message: result === 'clear' ? 'SEQUENCE COMPLETE!' : 'FAILED'
         }));
+        if (result === 'clear') {
+            const totalTime = Date.now() - arrowStartTimeRef.current; // Re-calculate to be sure or use local var if available
+            addRankingEntry('arrow_quiz', userProfile.nickname, userProfile.job, totalTime).then(() => setRankRefresh(prev => prev + 1));
+        }
     };
 
     // Arrow Timer (Visual & Logic)
@@ -665,6 +682,13 @@ export default function QuizMode() {
                                 </span>
                             </button>
                         </div>
+                        
+                        <div className="mt-8 pt-6 border-t border-slate-800">
+                             <Link to="/ranking" className="group flex items-center justify-center gap-2 text-slate-400 hover:text-yellow-400 font-bold transition-all p-3 rounded-xl hover:bg-slate-800">
+                                 <Trophy className="w-5 h-5" />
+                                 <span>Hall of Fame</span>
+                             </Link>
+                        </div>
                     </div>
                 </div>
             )}
@@ -757,8 +781,15 @@ export default function QuizMode() {
                             )}
                         </div>
                     </div>
+                    {/* PC Ranking Sidebar for Omega */}
+                    {!isMobile && (subMode === 'omega_quiz' || subMode === 'omega_unlimited') && (
+                        <div className="w-[300px] shrink-0 h-[600px] animate-in slide-in-from-right-4 duration-500">
+                             <MiniRanking category={subMode} refreshTrigger={rankRefresh} />
+                        </div>
+                    )}
+                    
                     {!isMobile && (
-                        <button onClick={returnToMenu} className="mt-auto py-3 text-slate-500 hover:text-white font-bold transition-colors">
+                        <button onClick={returnToMenu} className="fixed bottom-4 right-4 py-3 text-slate-500 hover:text-white font-bold transition-colors z-50">
                             Return to Menu
                         </button>
                     )}
@@ -766,7 +797,8 @@ export default function QuizMode() {
                 </div>
             )}
             {subMode === 'arrow_quiz' && (
-                <div className="flex flex-col items-center w-full max-w-[75vh] px-4">
+                <div className="flex gap-8 justify-center w-full px-4 items-start">
+                  <div className="flex flex-col items-center w-full max-w-[75vh]">
                     <div className="flex justify-between w-full mb-4 md:px-8 items-end">
                         <div className="flex flex-col">
                             <div className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Time Elapsed</div>
@@ -837,8 +869,21 @@ export default function QuizMode() {
                         </button>
                     )}
                 </div>
-            )
-            }
+                
+                {/* PC Ranking Sidebar for Arrow */}
+                  {!isMobile && (
+                        <div className="w-[280px] shrink-0 h-[600px] mt-10 animate-in slide-in-from-right-4 duration-500">
+                             <MiniRanking category="arrow_quiz" refreshTrigger={rankRefresh} />
+                        </div>
+                  )}
+                  
+                  {!isMobile && (
+                        <button onClick={returnToMenu} className="fixed bottom-4 right-4 py-3 text-slate-500 hover:text-white font-bold transition-colors z-50">
+                            Return to Menu
+                        </button>
+                  )}
+                </div>
+            )}
 
             {/* Floating Controls (Mobile Only) */}
             {
