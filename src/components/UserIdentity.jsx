@@ -35,10 +35,10 @@ export default function UserIdentity({ className }) {
             {/* Widget */}
             <button 
                 onClick={handleOpen}
-                className={`flex items-center gap-3 px-4 py-2 bg-white/20 dark:bg-slate-900/80 hover:bg-white/40 dark:hover:bg-slate-800 border border-white/30 dark:border-slate-700/50 hover:border-slate-400 rounded-full transition-all group backdrop-blur-md shadow-lg ${className}`}
+                className={`flex items-center gap-3 p-2 sm:px-4 sm:py-2 bg-white/20 dark:bg-slate-900/80 hover:bg-white/40 dark:hover:bg-slate-800 border border-white/30 dark:border-slate-700/50 hover:border-slate-400 rounded-full transition-all group backdrop-blur-md shadow-lg ${className}`}
                 title="Click to edit profile"
             >
-                <div className="w-8 h-8 rounded bg-slate-200 dark:bg-slate-800 shrink-0 overflow-hidden border border-slate-300 dark:border-slate-600 flex items-center justify-center relative">
+                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0 overflow-hidden border border-slate-300 dark:border-slate-600 flex items-center justify-center relative">
                     <img 
                         src={getJobIconUrl(userProfile.job)} 
                         alt={userProfile.job} 
@@ -48,9 +48,9 @@ export default function UserIdentity({ className }) {
                 </div>
                 <div className="hidden sm:flex flex-col items-start">
                     <div className="flex items-center gap-1">
-                        <span className="text-xs text-slate-600 dark:text-slate-400 font-bold uppercase">{userProfile.job}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">{userProfile.job}</span>
                     </div>
-                    <span className="text-sm font-bold text-slate-800 dark:text-white max-w-[100px] sm:max-w-[150px] truncate leading-none pb-0.5">{userProfile.nickname}</span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-white max-w-[150px] truncate leading-none pb-0.5">{userProfile.nickname}</span>
                 </div>
                 <Settings className="w-4 h-4 text-slate-500 group-hover:text-slate-800 dark:group-hover:text-white transition-colors ml-1 hidden sm:block" />
             </button>
@@ -120,7 +120,7 @@ export default function UserIdentity({ className }) {
                             </div>
 
                             <div className="pt-2 flex gap-3">
-                                <button onClick={() => setIsOpen(false)} className="flex-1 py-3 font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">Cancel</button>
+                                <button onClick={() => setIsOpen(false)} className="flex-1 py-3 font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">Cancel</button>
                                 <button onClick={handleSave} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-900/20 transition-all transform active:scale-95">Save Changes</button>
                             </div>
                         </div>

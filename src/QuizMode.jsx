@@ -30,19 +30,8 @@ export default function QuizMode({ initialMode = 'menu' }) {
     
     // Handle specific mode initialization on mount via Route Prop
     useEffect(() => {
-        // Reset state when mounting a new mode (or menu)
-        // Wait, if we navigate, component remounts.
         setSubMode(initialMode);
-        
-        if (initialMode === 'omega_quiz') {
-            startOmegaSet();
-        } else if (initialMode === 'omega_unlimited') {
-            startUnlimitedMode();
-        } else if (initialMode === 'arrow_quiz') {
-            startArrowQuiz();
-        } else {
-            resetGameState();
-        }
+        resetGameState(); // Ensure clean state when switching modes
     }, [initialMode]);
 
     // --- Reset Logic (Hoisted) ---
@@ -127,11 +116,9 @@ export default function QuizMode({ initialMode = 'menu' }) {
     // --- Omega Logic ---
 
     const startOmegaSet = () => {
-        // Push history state handled by Router
-        // window.history.pushState({ mode: 'omega_quiz' }, '', '#omega');
-
         const p1 = getNextOmegaProblem(null, null);
         setIsCenterRevealed(false);
+        setSubMode('omega_quiz'); // Ensure subMode is correct if called from START button
         setCurrentSet({
             p1: p1,
             p2: null,
@@ -139,15 +126,12 @@ export default function QuizMode({ initialMode = 'menu' }) {
             ghosts: []
         });
         setOmegaState('p1_playing');
-        // setStartTime will be handled in the reveal effect
         setElapsedTime(0);
         setUserSelectedSpot(null);
         setFeedbackMsg('');
     };
 
     const startUnlimitedMode = () => {
-        // window.history.pushState({ mode: 'omega_unlimited' }, '', '#unlimited');
-
         const p1 = getNextOmegaProblem(null, null);
         setSubMode('omega_unlimited');
         setOmegaState('unlimited_playing');
@@ -162,7 +146,7 @@ export default function QuizMode({ initialMode = 'menu' }) {
             timeLimit: 15000,
             score: 0
         });
-        setIsCenterRevealed(true); // No delay in unlimited
+        setIsCenterRevealed(true); 
         setStartTime(Date.now());
         setElapsedTime(0);
         setUserSelectedSpot(null);
@@ -495,8 +479,6 @@ export default function QuizMode({ initialMode = 'menu' }) {
     };
 
     const startArrowQuiz = (type) => { // type: 'inner' | 'outer'
-        // window.history.pushState({ mode: 'arrow_quiz' }, '', '#arrow');
-
         if (!type) {
             const types = ['inner', 'outer'];
             type = types[Math.floor(Math.random() * types.length)];
@@ -512,7 +494,7 @@ export default function QuizMode({ initialMode = 'menu' }) {
             message: ''
         });
 
-        setUserSelectedArrow(null); // Reset arrow selection
+        setUserSelectedArrow(null);
         arrowStartTimeRef.current = Date.now();
         setElapsedTime(0);
         processArrowFrame(type, 0);
@@ -686,29 +668,78 @@ export default function QuizMode({ initialMode = 'menu' }) {
 
     const shouldShowAttacks = omegaState === 'p1_feedback' || omegaState === 'p2_feedback' || omegaState === 'set_fail' || omegaState === 'set_clear' || omegaState === 'p1_transition' || omegaState === 'unlimited_fail' || omegaState === 'unlimited_feedback';
     const isInteractive = omegaState === 'p1_playing' || omegaState === 'p2_playing' || omegaState === 'unlimited_playing';
-    const renderOmegaField = () => {
-        if (!currentProblemForRender) return null;
+    const renderStartOverlay = () => {
+        let title = '';
+        let desc = '';
+        let onStart = null;
+
+        if (subMode === 'omega_quiz') {
+            title = 'Code: Omega (Normal)';
+            desc = '두 번의 기믹 패턴을 파악하여 안전한 위치를 순서대로 찾아내세요.';
+            onStart = startOmegaSet;
+        } else if (subMode === 'omega_unlimited') {
+            title = 'Code: Omega (Unlimited)';
+            desc = '제한 시간 내에 끊임없이 문제를 해결하세요. 갈수록 시간이 짧아집니다.';
+            onStart = startUnlimitedMode;
+        } else if (subMode === 'arrow_quiz') {
+            title = 'Cosmo Arrow Quiz';
+            desc = '화살표 기믹이 터지는 순서를 파악하여 안전한 경로로 이동하세요.';
+            onStart = () => startArrowQuiz();
+        }
 
         return (
-            <OmegaField
-                placedUnits={displayUnits}
-                showAnswerSpots={true}
-                onAnswerSpotClick={isInteractive ? handleOmegaAnswer : undefined}
-                selectedSpot={userSelectedSpot}
-                previousAnswerSpot={currentSet.p1Answer}
-                correctSpots={displayCorrectSpots}
-                showAttacks={shouldShowAttacks}
-                isTransitioning={omegaState === 'p1_transition'}
-                isMobile={isMobile}
-                isCenterRevealed={isCenterRevealed}
-            />
+            <div className="absolute inset-0 z-50 flex items-center justify-center p-4">
+                <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center animate-in fade-in zoom-in duration-300">
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{title}</h2>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm mb-8 leading-relaxed">
+                        {desc}
+                    </p>
+                    <div className="flex flex-col gap-3">
+                        <button 
+                            onClick={onStart}
+                            className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-600 text-white font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-500/20"
+                        >
+                            START MISSION
+                        </button>
+                        <button 
+                            onClick={returnToMenu}
+                            className="w-full py-3 bg-slate-200/50 dark:bg-white/10 text-slate-600 dark:text-white/70 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-white/20 transition-all"
+                        >
+                            Return to Menu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderOmegaField = () => {
+        const isIdle = omegaState === 'idle';
+        if (!currentProblemForRender && !isIdle) return null;
+
+        return (
+            <div className="relative w-full aspect-square">
+                {isIdle && renderStartOverlay()}
+                <OmegaField
+                    placedUnits={displayUnits}
+                    showAnswerSpots={!isIdle}
+                    onAnswerSpotClick={isInteractive ? handleOmegaAnswer : undefined}
+                    selectedSpot={userSelectedSpot}
+                    previousAnswerSpot={currentSet.p1Answer}
+                    correctSpots={displayCorrectSpots}
+                    showAttacks={shouldShowAttacks}
+                    isTransitioning={omegaState === 'p1_transition'}
+                    isMobile={isMobile}
+                    isCenterRevealed={isCenterRevealed}
+                />
+            </div>
         );
     };
 
 
     return (
         <div className="flex flex-col items-center min-h-[calc(100vh-2rem)] w-full font-sans overflow-x-hidden">
-            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500 mb-6 shrink-0 drop-shadow-sm">
+            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500 mb-6 shrink-0 drop-shadow-sm pt-4">
                 Omega Protocol Trainer
             </h1>
 
@@ -788,37 +819,37 @@ export default function QuizMode({ initialMode = 'menu' }) {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex justify-between items-center border-t border-slate-800 pt-4">
+                                <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-800 pt-4">
                                     <div className="text-center w-full">
-                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">CURRENT STAGE</div>
-                                        <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400">STAGE {unlimitedStats.level}</div>
+                                        <div className="text-[10px] uppercase text-slate-400 dark:text-slate-500 font-bold mb-1">CURRENT STAGE</div>
+                                        <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400">STAGE {unlimitedStats.level}</div>
                                     </div>
-                                    <div className="h-8 w-px bg-slate-800"></div>
+                                    <div className="h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
                                     <div className="text-center w-full">
-                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">LIMIT</div>
-                                        <div className="text-xl font-bold text-red-400">{unlimitedStats.timeLimit / 1000}s</div>
+                                        <div className="text-[10px] uppercase text-slate-400 dark:text-slate-500 font-bold mb-1">LIMIT</div>
+                                        <div className="text-xl font-bold text-red-500 dark:text-red-400">{unlimitedStats.timeLimit / 1000}s</div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-700 shadow-xl min-h-[150px] flex flex-col items-center justify-center text-center">
+                        <div className="bg-white/60 dark:bg-slate-900/80 p-6 rounded-2xl border border-white/20 dark:border-slate-700 shadow-xl backdrop-blur-md min-h-[150px] flex flex-col items-center justify-center text-center">
                             {(omegaState === 'set_clear' || omegaState === 'set_fail' || omegaState === 'unlimited_fail') ? (
                                 <>
-                                    <div className={`text-4xl font-black mb-2 animate-bounce ${omegaState === 'set_clear' ? 'text-green-500' : 'text-red-500'}`}>
+                                    <div className={`text-4xl font-black mb-2 animate-bounce ${omegaState === 'set_clear' ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
                                         {omegaState === 'set_clear' ? 'PERFECT!' : 'GAME OVER'}
                                     </div>
-                                    <div className="text-slate-400 mb-6 flex flex-col items-center">
+                                    <div className="text-slate-600 dark:text-slate-400 mb-6 flex flex-col items-center">
                                         {omegaState === 'unlimited_fail' ? (
                                             <>
-                                                <div className="text-lg text-white font-bold mb-1">Reached STAGE {unlimitedStats.level}</div>
-                                                <div className="text-sm text-slate-500">Fastest Interval: {unlimitedStats.timeLimit / 1000}s</div>
+                                                <div className="text-lg text-slate-900 dark:text-white font-bold mb-1">Reached STAGE {unlimitedStats.level}</div>
+                                                <div className="text-sm text-slate-500 dark:text-slate-500">Fastest Interval: {unlimitedStats.timeLimit / 1000}s</div>
                                             </>
                                         ) : (
                                             feedbackMsg
                                         )}
                                     </div>
-                                    <button onClick={omegaState === 'unlimited_fail' ? startUnlimitedMode : startOmegaSet} className="w-full py-4 bg-white text-slate-950 font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2">
+                                    <button onClick={omegaState === 'unlimited_fail' ? startUnlimitedMode : startOmegaSet} className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2">
                                         {omegaState === 'unlimited_fail' ? 'RETRY' : 'NEXT SET'} <span className="text-xl">➔</span>
                                     </button>
                                 </>
@@ -853,98 +884,92 @@ export default function QuizMode({ initialMode = 'menu' }) {
                 </div>
             )}
             {subMode === 'arrow_quiz' && (
-                <div className="flex gap-8 justify-center w-full px-4 items-start">
-                  <div className="flex flex-col items-center w-full max-w-[75vh]">
-                    <div className="flex justify-between w-full mb-4 md:px-8 items-end">
-                        <div className="flex flex-col">
-                            <div className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Time Elapsed</div>
-                            <div className={`text-4xl font-black font-led leading-none ${arrowState.status === 'fail' ? 'text-red-500' : 'text-yellow-400'}`}>
-                                {(elapsedTime / 1000).toFixed(2)}s
+                <div className="flex flex-col xl:flex-row gap-8 w-full px-4 md:px-8 items-center xl:items-start justify-center animate-in fade-in duration-300">
+                    {/* Left Panel: Field */}
+                    <div className="w-full max-w-[75vh] shrink-0">
+                        <div className="flex justify-between w-full mb-4 md:px-8 items-end">
+                            <div className="flex flex-col">
+                                <div className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Time Elapsed</div>
+                                <div className={`text-4xl font-black font-led leading-none ${arrowState.status === 'fail' ? 'text-red-500' : 'text-yellow-400'}`}>
+                                    {(elapsedTime / 1000).toFixed(2)}s
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Step</div>
+                                <div className="text-2xl font-bold font-led">
+                                    {Math.min(arrowState.currentIndex + 1, arrowState.totalSteps)} / {arrowState.totalSteps}
+                                </div>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <div className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">Step</div>
-                            <div className="text-2xl font-bold font-led">
-                                {Math.min(arrowState.currentIndex + 1, arrowState.totalSteps)} / {arrowState.totalSteps}
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className={`w-full relative transition-all duration-300 ${arrowProblem?.isQuestion ? 'ring-4 ring-blue-500/50 rounded-lg' : 'opacity-90'}`}>
-                        {arrowProblem && (
+                        <div className="relative aspect-square">
+                            {arrowState.status === 'idle' && renderStartOverlay()}
                             <ArrowGrid
-                                activeIndices={arrowState.status === 'fail' ? arrowProblem.nextIndices : arrowProblem.activeIndices}
-                                isInteractive={arrowState.status === 'playing' && arrowProblem.isQuestion}
+                                activeIndices={arrowState.status === 'fail' && arrowProblem?.nextIndices ? arrowProblem.nextIndices : (arrowProblem ? arrowProblem.activeIndices : [])}
+                                isInteractive={arrowState.status === 'playing' && arrowProblem?.isQuestion}
                                 onCellClick={handleArrowAnswer}
                                 history={arrowState.history}
                                 selectedCell={userSelectedArrow}
                             />
+
+                            {arrowState.status === 'playing' && arrowProblem && !arrowProblem.isQuestion && (
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="bg-black/40 backdrop-blur-sm px-4 py-1 rounded-full text-white/80 font-bold text-sm border border-white/20">
+                                        WATCH PATTERN
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {!arrowState.message && arrowState.status === 'playing' && (
+                            <div className="mt-8 text-center text-slate-500 text-sm font-medium">
+                                {arrowProblem?.isQuestion
+                                    ? "👉 DODGE! Click a SAFE SPOT for the NEXT wave!"
+                                    : "👀 Watch the pattern..."}
+                            </div>
                         )}
-                        {/* Overlay Message when !isQuestion (Auto Playing) is NOT necessary due to visual cues, but we can add one if user wants */}
-                        {arrowState.status === 'playing' && arrowProblem && !arrowProblem.isQuestion && (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="bg-black/40 backdrop-blur-sm px-4 py-1 rounded-full text-white/80 font-bold text-sm border border-white/20">
-                                    WATCH PATTERN
+
+                        {arrowState.message && (
+                            <div className="mt-8 text-center animate-in slide-in-from-bottom-4 fade-in duration-300">
+                                <div className={`text-5xl font-black mb-2 ${arrowState.status === 'clear' ? 'text-green-600 dark:text-green-500' : arrowState.status === 'fail' ? 'text-red-600 dark:text-red-500' : 'text-slate-900 dark:text-white'}`}>
+                                    {arrowState.message}
+                                </div>
+                                {arrowState.status === 'clear' && (
+                                    <div className="text-xl text-slate-600 dark:text-slate-300 mb-6">
+                                        Final Time: <span className="text-yellow-600 dark:text-yellow-400 font-led font-bold">{(elapsedTime / 1000).toFixed(2)}s</span>
+                                    </div>
+                                )}
+                                <div className="flex gap-4 justify-center">
+                                    <button onClick={() => startArrowQuiz()} className="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg">
+                                        RETRY
+                                    </button>
+                                    <button onClick={returnToMenu} className="px-8 py-3 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-white font-bold rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700 transition-all">
+                                        MENU
+                                    </button>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {arrowState.message && (
-                        <div className="mt-8 text-center animate-in slide-in-from-bottom-4 fade-in duration-300">
-                            <div className={`text-5xl font-black mb-2 ${arrowState.status === 'clear' ? 'text-green-500' : arrowState.status === 'fail' ? 'text-red-500' : 'text-white'}`}>
-                                {arrowState.message}
-                            </div>
-                            {arrowState.status === 'clear' && (
-                                <div className="text-xl text-slate-300 mb-6">
-                                    Final Time: <span className="text-yellow-400 font-led font-bold">{(elapsedTime / 1000).toFixed(2)}s</span>
-                                </div>
-                            )}
-                            <div className="flex gap-4 justify-center">
-                                <button onClick={() => startArrowQuiz()} className="px-8 py-3 bg-white text-slate-900 font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg">
-                                    RETRY
-                                </button>
-                                <button onClick={returnToMenu} className="px-8 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-all">
-                                    MENU
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {!arrowState.message && (
-                        <div className="mt-8 text-slate-500 text-sm font-medium">
-                            {arrowProblem?.isQuestion
-                                ? "👉 DODGE! Click a SAFE SPOT for the NEXT wave!"
-                                : "👀 Watch the pattern..."}
-                        </div>
-                    )}
-
-                    {!arrowState.message && !isMobile && (
-                        <button onClick={returnToMenu} className="mt-8 py-3 text-slate-500 hover:text-white font-bold transition-colors">
-                            Return to Menu
-                        </button>
-                    )}
-                </div>
-                
-                {/* PC Ranking Sidebar for Arrow */}
-                  {!isMobile && (
-                        <div className="w-[280px] shrink-0 h-[600px] mt-10 animate-in slide-in-from-right-4 duration-500">
+                    {/* Right Panel: Mobile and PC rankings etc. */}
+                    {!isMobile && (
+                        <div className="w-[300px] shrink-0 h-[600px] animate-in slide-in-from-right-4 duration-500">
                              <MiniRanking category="arrow_quiz" refreshTrigger={rankRefresh} />
                         </div>
-                  )}
-                  
-                  {!isMobile && (
+                    )}
+                    
+                    {!isMobile && (
                         <button onClick={returnToMenu} className="fixed bottom-4 right-4 py-3 text-slate-500 hover:text-white font-bold transition-colors z-50">
                             Return to Menu
                         </button>
-                  )}
+                    )}
                 </div>
             )}
 
             {/* Floating Controls (Mobile Only) */}
             {
                 isMobile && subMode !== 'menu' && (
-                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex gap-4 bg-slate-900/90 p-2 rounded-2xl border border-slate-700 shadow-2xl backdrop-blur-md">
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex gap-4 bg-white/90 dark:bg-slate-900/90 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl backdrop-blur-md">
 
                         {/* CONFIRM BUTTON (Playing State) */}
                         {((subMode === 'omega_quiz' && (omegaState === 'p1_playing' || omegaState === 'p2_playing')) ||
@@ -995,7 +1020,7 @@ export default function QuizMode({ initialMode = 'menu' }) {
                         {((subMode === 'omega_quiz' && (omegaState === 'p1_playing' || omegaState === 'p2_playing')) ||
                             (subMode === 'omega_unlimited' && omegaState === 'unlimited_playing') ||
                             (subMode === 'arrow_quiz' && arrowState.status === 'playing')) && (
-                                <button onClick={returnToMenu} className="px-4 py-3 bg-slate-800/80 text-slate-400 hover:text-white font-bold rounded-xl border border-slate-700">
+                                <button onClick={returnToMenu} className="px-4 py-3 bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold rounded-xl border border-slate-200 dark:border-slate-700">
                                     ✕
                                 </button>
                             )}

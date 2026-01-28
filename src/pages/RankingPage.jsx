@@ -83,7 +83,7 @@ export default function RankingPage() {
                                                  {r.rank}
                                              </div>
                                          ) : (
-                                            <span className="text-slate-600 dark:text-slate-500 font-bold text-lg group-hover:text-slate-900 dark:group-hover:text-slate-400 transition-colors">#{r.rank}</span>
+                                            <span className="text-slate-800 dark:text-slate-500 font-bold text-lg group-hover:text-slate-950 dark:group-hover:text-slate-400 transition-colors">#{r.rank}</span>
                                          )}
                                      </div>
                                      <div className="col-span-2 md:col-span-1 flex justify-center">
@@ -91,7 +91,7 @@ export default function RankingPage() {
                                             <img src={getJobIconUrl(r.job)} className="w-full h-full object-cover rounded-lg" onError={e=>e.target.style.display='none'}/>
                                          </div>
                                      </div>
-                                     <div className="col-span-4 md:col-span-6 font-bold text-slate-700 dark:text-slate-300 text-sm md:text-lg truncate group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors pl-2">
+                                     <div className="col-span-4 md:col-span-6 font-bold text-slate-900 dark:text-slate-300 text-sm md:text-lg truncate group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors pl-2">
                                          {r.nickname}
                                      </div>
                                      <div className="col-span-4 md:col-span-4 text-right font-mono font-bold text-lg md:text-xl text-blue-500 dark:text-blue-400 pr-2 whitespace-nowrap">

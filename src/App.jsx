@@ -31,14 +31,17 @@ export default function App() {
                         {/* Background Gradients */}
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 dark:from-blue-500/10 dark:to-purple-500/10 pointer-events-none"></div>
 
-                        {/* Floating Identity Widget - Mobile: Top-Right (Icon Only), Desktop: Top-Left (Full) */}
-                        <div className="absolute top-4 right-4 md:left-4 md:right-auto z-50">
-                            <UserIdentity />
-                        </div>
-                        
-                        {/* Theme Toggle - Mobile: Top-Left, Desktop: Top-Right */}
-                        <div className="absolute top-4 left-4 md:right-4 md:left-auto z-50">
-                            <ThemeToggle />
+                        {/* Floating Widgets Container */}
+                        <div className="fixed bottom-4 right-4 md:top-4 md:bottom-auto md:right-4 md:left-4 md:w-[calc(100%-2rem)] flex flex-col-reverse md:flex-row-reverse md:justify-between items-end md:items-start gap-3 z-50 pointer-events-none">
+                            {/* User Profile */}
+                            <div className="pointer-events-auto">
+                                <UserIdentity />
+                            </div>
+                            
+                            {/* Theme Toggle */}
+                            <div className="pointer-events-auto md:absolute md:left-0 md:top-0">
+                                <ThemeToggle />
+                            </div>
                         </div>
 
                         <Routes>
