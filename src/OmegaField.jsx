@@ -236,9 +236,13 @@ function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, on
             {/* 3. Answer Spots (Clickable Zones) */}
             {
                 showAnswerSpots && ANSWER_SPOTS.map((s) => {
-                    let bgStyle = 'bg-white/10 border-white/30 hover:bg-white/30 hover:border-white';
-                    if (selectedSpot === s.id) bgStyle = 'bg-blue-500 border-blue-300';
-                    if (previousAnswerSpot === s.id) bgStyle = 'bg-yellow-500/30 border-yellow-400 shadow-[0_0_20px_rgba(253,224,71,0.5)] scale-110 ring-2 ring-yellow-400/50'; // Highlight P1 Answer with Yellow Glow
+                    // Optimized for Light/Dark mode visibility
+                    // Light Mode: Use stronger blue/slate mix to stand out against gray center.
+                    // Dark Mode: Keep white/transparent style.
+                    let bgStyle = 'bg-blue-600/30 border-blue-600/60 hover:bg-blue-600/50 hover:border-blue-800 dark:bg-white/10 dark:border-white/30 dark:hover:bg-white/30 dark:hover:border-white';
+                    
+                    if (selectedSpot === s.id) bgStyle = 'bg-blue-500 border-blue-400 dark:border-blue-300';
+                    if (previousAnswerSpot === s.id) bgStyle = 'bg-yellow-500/40 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.5)] scale-110 ring-2 ring-yellow-500/50';
 
                     const isCorrect = correctSpots && correctSpots.includes(s.id);
                     const isP1 = previousAnswerSpot === s.id;

@@ -12,6 +12,8 @@ const COLLECTION_NAME = 'rankings';
  */
 // Simple in-memory cache
 // Structure: { categoryName: { timestamp: number, data: Array } }
+// Simple in-memory cache
+// Structure: { categoryName: { timestamp: number, data: Array } }
 const rankingCache = {};
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -20,20 +22,27 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
  * @param {string} category - 'arrow', 'omega_normal', 'omega_unlimited'
  * @param {string} nickname 
  * @param {string} job 
- * @param {number} score - Time (ms) for Arrow/Normal, Stage Level for Unlimited
+ * @param {number} score - Clears (Normal/Unlimited), Time (Arrow)
+ * @param {number} subScore - Avg Time (Normal), null (others)
  */
-export const addRankingEntry = async (category, nickname, job, score) => {
+export const addRankingEntry = async (category, nickname, job, score, subScore = null) => {
   try {
     // Basic validation
     if (!nickname || !job) return;
 
-    await addDoc(collection(db, COLLECTION_NAME), {
+    const data = {
       category,
       nickname: nickname.substring(0, 12), // Limit length
       job,
       score: Number(score), 
       timestamp: serverTimestamp()
-    });
+    };
+    
+    if (subScore !== null) {
+        data.subScore = Number(subScore);
+    }
+
+    await addDoc(collection(db, COLLECTION_NAME), data);
     
     // Invalidate cache for this category so next fetch gets fresh data
     delete rankingCache[category];
@@ -59,17 +68,6 @@ export const getRankings = async (category, limitCount = 100, forceRefresh = fal
     const now = Date.now();
     
     if (!forceRefresh && cached && (now - cached.timestamp < CACHE_DURATION)) {
-        // Return cached data if valid and fresh enough
-        // Note: limitCount might differ, but usually we fetch 100 on page and 10 on sidebar.
-        // If we cached 100, we can slice for 10. If we cached 10, and need 100, we must refetch.
-        // For simplicity, if we have cache and it covers our need (length >= limit), return slice.
-        // Or simplified: Just return cache if it exists. 
-        // Since we usually fetch 10 or 100, let's just use the cached data even if it's 100 when we asked 10.
-        // But if we asked 100 and have 10, we should refetch? 
-        // Let's rely on the standard usage: Page loads 100. Sidebar loads 10.
-        // If sidebar loads first, it catches 10. Page loads later, needs 100 -> Refetch.
-        // If page loads first, catches 100. Sidebar loads later, needs 10 -> Return 100 (sliced).
-        
         if (cached.data.length >= limitCount || cached.data.length < limitCount && cached.limitUsed >= limitCount) {
              return cached.data.slice(0, limitCount);
         }
@@ -87,8 +85,28 @@ export const getRankings = async (category, limitCount = 100, forceRefresh = fal
             orderBy("score", "desc"), 
             limit(limitCount)
         );
+    } else if (category === 'omega_quiz') {
+        // Normal Mode: High Clears (score) > Low Avg Time (subScore)
+        try {
+             q = query(
+                rankingsRef, 
+                where("category", "==", category), 
+                orderBy("score", "desc"), 
+                orderBy("subScore", "asc"),
+                limit(limitCount)
+            );
+        } catch(e) {
+             // Fallback if index missing (initially)
+             console.warn("Composite Index missing, falling back to simple sort");
+             q = query(
+                rankingsRef, 
+                where("category", "==", category), 
+                orderBy("score", "desc"), 
+                limit(limitCount)
+            );
+        }
     } else {
-        // Low time is better (Arrow, Omega Normal)
+        // Low time is better (Arrow)
         q = query(
             rankingsRef, 
             where("category", "==", category), 

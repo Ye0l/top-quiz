@@ -4,14 +4,17 @@ import ArrowGrid from './ArrowGrid';
 import MiniRanking from './components/MiniRanking';
 import { patterns } from './patterns';
 import { getNextOmegaProblem } from './data/omegaProblems';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from './contexts/UserContext';
 import { addRankingEntry } from './utils/rankingService';
 import { Trophy } from 'lucide-react';
 
-export default function QuizMode() {
+export default function QuizMode({ initialMode = 'menu' }) {
     const { userProfile } = useUser();
-    const [subMode, setSubMode] = useState('menu'); // menu, omega_quiz, arrow_quiz
+    const navigate = useNavigate();
+    const location = useLocation();
+    
+    const [subMode, setSubMode] = useState(initialMode); // menu, omega_quiz, arrow_quiz, omega_unlimited
     const [rankRefresh, setRankRefresh] = useState(0);
 
     // --- Omega Quiz State ---
@@ -24,6 +27,23 @@ export default function QuizMode() {
 
     const arrowTimerRef = useRef(null);
     const arrowStartTimeRef = useRef(0);
+    
+    // Handle specific mode initialization on mount via Route Prop
+    useEffect(() => {
+        // Reset state when mounting a new mode (or menu)
+        // Wait, if we navigate, component remounts.
+        setSubMode(initialMode);
+        
+        if (initialMode === 'omega_quiz') {
+            startOmegaSet();
+        } else if (initialMode === 'omega_unlimited') {
+            startUnlimitedMode();
+        } else if (initialMode === 'arrow_quiz') {
+            startArrowQuiz();
+        } else {
+            resetGameState();
+        }
+    }, [initialMode]);
 
     // --- Reset Logic (Hoisted) ---
     const resetGameState = () => {
@@ -55,38 +75,20 @@ export default function QuizMode() {
     };
 
     // History & Navigation Logic
-    useEffect(() => {
-        const handlePopState = (event) => {
-            // When popping state (Back button), we should revert to menu.
-            // Using hash check is also good practice.
-            // If we are at root (no hash) or different hash?
-            // Simply: If we were in a game mode (subMode !== 'menu'), reset to menu.
-            setSubMode(prev => {
-                if (prev !== 'menu') {
-                    resetGameState();
-                    return 'menu';
-                }
-                return prev;
-            });
-        };
+    // History & Navigation Logic - Removed as Router handles it now
+    // useEffect(() => { ... }, []);
 
-        window.addEventListener('popstate', handlePopState);
-
-        // Initial Hash Handling (Optional: Clearing hash on mount to standardise)
-        if (window.location.hash) {
-            window.history.replaceState(null, '', ' ');
-        }
-
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, []);
-
+    // Stats
     // Stats
     const [stats, setStats] = useState({
         clears: 0,
         fails: 0,
+        streak: 0,
         totalTime: 0, // ms
         history: [] // { type: 'clear'|'fail', time: ms }
     });
+
+
     const [unlimitedStats, setUnlimitedStats] = useState({
         level: 1,
         timeLimit: 15000, // ms
@@ -125,8 +127,8 @@ export default function QuizMode() {
     // --- Omega Logic ---
 
     const startOmegaSet = () => {
-        // Push history state to enable "Back" button
-        window.history.pushState({ mode: 'omega_quiz' }, '', '#omega');
+        // Push history state handled by Router
+        // window.history.pushState({ mode: 'omega_quiz' }, '', '#omega');
 
         const p1 = getNextOmegaProblem(null, null);
         setIsCenterRevealed(false);
@@ -144,7 +146,7 @@ export default function QuizMode() {
     };
 
     const startUnlimitedMode = () => {
-        window.history.pushState({ mode: 'omega_unlimited' }, '', '#unlimited');
+        // window.history.pushState({ mode: 'omega_unlimited' }, '', '#unlimited');
 
         const p1 = getNextOmegaProblem(null, null);
         setSubMode('omega_unlimited');
@@ -210,6 +212,9 @@ export default function QuizMode() {
         const isCorrect = currentProblem.correctSpots.includes(spotId);
 
         if (isCorrect) {
+            // Visual Feedback: Show AOEs immediately
+            setIsCenterRevealed(true);
+
             if (omegaState === 'p1_playing') {
                 // Correct P1 -> Move to P2
                 setOmegaState('p1_feedback');
@@ -250,6 +255,8 @@ export default function QuizMode() {
                         p1Answer: null,
                         ghosts: []
                     });
+                     // UNLIMITED MODE tracks time per stage? Or global?
+                     // Currently implementation resets time per stage.
                     setStartTime(Date.now());
                     setElapsedTime(0);
                     setUserSelectedSpot(null);
@@ -257,13 +264,29 @@ export default function QuizMode() {
                     setOmegaState('unlimited_playing');
                 }, 500); // 0.5s Feedback
             } else {
-                // Correct P2 -> Set Clear
-                setOmegaState('set_clear');
-                setFeedbackMsg('SET CLEARED!');
-                const timeTaken = Date.now() - startTime;
+                // Omega Normal: P2 Correct -> SET CLEAR -> Loop to next set (Survival)
+                setOmegaState('p2_feedback'); // Use a feedback state rather than 'set_clear' immediately
+                setFeedbackMsg('SET CLEARED! Next Set...');
+                const timeTaken = elapsedTime; // Use visual timer value
                 updateStats('clear', timeTaken);
-                // Submit Ranking (Normal Mode Clear)
-                addRankingEntry('omega_quiz', userProfile.nickname, userProfile.job, timeTaken).then(() => setRankRefresh(prev => prev + 1));
+                
+                // Provide visual feedback then move to next set
+                 setTimeout(() => {
+                    // Start New Set
+                    const p1 = getNextOmegaProblem(null, null);
+                    setIsCenterRevealed(false);
+                    setCurrentSet({
+                        p1: p1,
+                        p2: null,
+                        p1Answer: null,
+                        ghosts: []
+                    });
+                    setOmegaState('p1_playing');
+                    setElapsedTime(0);
+                    setUserSelectedSpot(null);
+                    setFeedbackMsg('');
+                    // startTime will be set by useEffect when center is revealed
+                }, 1500);
             }
         } else {
             // Wrong -> Fail
@@ -275,7 +298,19 @@ export default function QuizMode() {
             } else {
                 setOmegaState('set_fail');
                 setFeedbackMsg('FAILURE! Incorrect Spot.');
-                const timeTaken = Date.now() - startTime;
+                const timeTaken = elapsedTime; // Use visual timer value
+                
+                // Submit Ranking (Normal Mode Fail - Survival Result)
+                // Score: Consecutive Clears (stats.streak)
+                // SubScore: Avg Time (totalTime / clears)
+                // Note: The streak we submit is the one that just ended.
+                const successfulStreak = stats.streak;
+                const avg = stats.clears > 0 ? (stats.totalTime / stats.clears / 1000).toFixed(2) : 9999;
+                
+                if (successfulStreak > 0) {
+                    addRankingEntry('omega_quiz', userProfile.nickname, userProfile.job, successfulStreak, avg).then(() => setRankRefresh(prev => prev + 1));
+                }
+                
                 updateStats('fail', timeTaken);
             }
         }
@@ -379,6 +414,7 @@ export default function QuizMode() {
             ...prev,
             clears: type === 'clear' ? prev.clears + 1 : prev.clears,
             fails: type === 'fail' ? prev.fails + 1 : prev.fails,
+            streak: type === 'clear' ? prev.streak + 1 : 0, // Reset streak on fail
             totalTime: type === 'clear' ? prev.totalTime + time : prev.totalTime,
             history: [...prev.history, { type, time }]
         }));
@@ -404,6 +440,15 @@ export default function QuizMode() {
                     } else {
                         setOmegaState('set_fail');
                         setFeedbackMsg('TIME LIMIT EXCEEDED!');
+                        
+                        // Submit Ranking (Normal Mode Timeout)
+                        const successfulStreak = stats.streak;
+                        const avg = stats.clears > 0 ? (stats.totalTime / stats.clears / 1000).toFixed(2) : 9999;
+                        
+                        if (successfulStreak > 0) {
+                            addRankingEntry('omega_quiz', userProfile.nickname, userProfile.job, successfulStreak, avg).then(() => setRankRefresh(prev => prev + 1));
+                        }
+
                         updateStats('fail', 30000);
                     }
                     clearInterval(interval);
@@ -414,10 +459,14 @@ export default function QuizMode() {
 
         }
         return () => clearInterval(interval);
-    }, [omegaState, startTime, isCenterRevealed, unlimitedStats.timeLimit]);
+    }, [omegaState, startTime, isCenterRevealed, unlimitedStats.timeLimit, stats]);
 
     // Center Reveal Timer
     useEffect(() => {
+        // Optimization: If already revealed, do not schedule timeout.
+        // This prevents the effect from churning scheduling/clearing timeouts on every `elapsedTime` update (10ms).
+        if (isCenterRevealed) return;
+
         let timer;
         if (omegaState === 'p1_playing' || omegaState === 'p2_playing') {
             timer = setTimeout(() => {
@@ -425,10 +474,16 @@ export default function QuizMode() {
                 setStartTime(Date.now() - elapsedTime);
             }, 3000);
         } else {
+            // For other states or initial load where we might want immediate reveal?
+            // Actually in `startUnlimitedMode` we set `isCenterRevealed(true)` manually.
+            // If `omegaState` is not playing, we usually don't need this, but existing logic had else { setTrue }.
+            // The else block here runs when NOT p1/p2 playing. e.g. menu?
+            // If we are in menu, `isCenterRevealed` doesn't matter much.
+            // Let's keep existing behavior safely.
             setIsCenterRevealed(true);
         }
         return () => clearTimeout(timer);
-    }, [omegaState, elapsedTime]);
+    }, [omegaState, elapsedTime, isCenterRevealed]);
 
     // Average Calc
     const avgTime = stats.clears > 0 ? (stats.totalTime / stats.clears / 1000).toFixed(1) : '0.0';
@@ -440,7 +495,7 @@ export default function QuizMode() {
     };
 
     const startArrowQuiz = (type) => { // type: 'inner' | 'outer'
-        window.history.pushState({ mode: 'arrow_quiz' }, '', '#arrow');
+        // window.history.pushState({ mode: 'arrow_quiz' }, '', '#arrow');
 
         if (!type) {
             const types = ['inner', 'outer'];
@@ -597,16 +652,10 @@ export default function QuizMode() {
 
     // --- Return to Menu & Reset ---
     const returnToMenu = () => {
-        // If we have a state pushed (which we should if we are in a mode), go back.
-        // This triggers popstate, which calls resetGameState + setSubMode('menu').
-        // We check if current URL has hash to be sure we can go back.
-        if (window.location.hash) {
-            window.history.back();
-        } else {
-            // Fallback if no history state (e.g. refresh on game page if we supported deep links, or dev reload)
-            resetGameState();
-            setSubMode('menu');
-        }
+        // Use Router navigate to return to root
+        navigate('/');
+        // resetGameState(); // Will be handled by unmount/mount of QuizMode at '/'
+        setSubMode('menu'); // Redundant if unmounting, but safe for immediate update
     };
 
     // --- Memoize Data derived from state to ensure stability for React.memo children ---
@@ -619,18 +668,23 @@ export default function QuizMode() {
         : [];
 
     const displayUnits = React.useMemo(() => {
+        // Fix Ghosting: Ensure we don't render P2 ghosts if we are simply transitioning from P1
+        if (omegaState === 'p1_transition') {
+             return currentSet.p1.units;
+        }
         if (!currentProblemForRender) return [];
         return [...currentProblemForRender.units, ...(ghostsForRender || [])];
-    }, [currentProblemForRender, ghostsForRender]);
+    }, [currentProblemForRender, ghostsForRender, omegaState, currentSet.p1]);
 
     const displayCorrectSpots = React.useMemo(() => {
-        if (omegaState === 'set_clear' || omegaState === 'p1_feedback' || omegaState === 'unlimited_fail' || omegaState === 'unlimited_feedback') {
+        // Fix P2 Feedback: Include p2_feedback state
+        if (omegaState === 'set_clear' || omegaState === 'p1_feedback' || omegaState === 'p2_feedback' || omegaState === 'unlimited_fail' || omegaState === 'unlimited_feedback') {
             return currentProblemForRender ? currentProblemForRender.correctSpots : [];
         }
         return [];
     }, [omegaState, currentProblemForRender]);
 
-    const shouldShowAttacks = omegaState === 'p1_feedback' || omegaState === 'set_fail' || omegaState === 'set_clear' || omegaState === 'p1_transition' || omegaState === 'unlimited_fail' || omegaState === 'unlimited_feedback';
+    const shouldShowAttacks = omegaState === 'p1_feedback' || omegaState === 'p2_feedback' || omegaState === 'set_fail' || omegaState === 'set_clear' || omegaState === 'p1_transition' || omegaState === 'unlimited_fail' || omegaState === 'unlimited_feedback';
     const isInteractive = omegaState === 'p1_playing' || omegaState === 'p2_playing' || omegaState === 'unlimited_playing';
     const renderOmegaField = () => {
         if (!currentProblemForRender) return null;
@@ -653,38 +707,38 @@ export default function QuizMode() {
 
 
     return (
-        <div className="flex flex-col items-center min-h-screen bg-slate-950 text-white p-4 font-sans overflow-x-hidden w-full">
-            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-6 shrink-0">
+        <div className="flex flex-col items-center min-h-[calc(100vh-2rem)] w-full font-sans overflow-x-hidden">
+            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500 mb-6 shrink-0 drop-shadow-sm">
                 Omega Protocol Trainer
             </h1>
 
             {subMode === 'menu' && (
                 <div className="flex flex-col gap-6 w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 text-center">
-                        <h2 className="text-xl font-bold mb-4 text-slate-200">Select Mode</h2>
+                    <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-white/20 dark:border-slate-700/50 shadow-xl text-center">
+                        <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-slate-200">Select Mode</h2>
                         <div className="flex flex-col gap-4">
-                            <button onClick={() => { setSubMode('omega_quiz'); startOmegaSet(); }}
-                                className="group relative px-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-red-500/20 hover:-translate-y-1 transition-all overflow-hidden">
+                            <button onClick={() => navigate('/omega-normal')}
+                                className="group relative px-6 py-4 bg-gradient-to-r from-red-500 to-pink-600 rounded-xl font-bold text-lg text-white shadow-lg hover:shadow-red-500/20 hover:-translate-y-1 transition-all overflow-hidden">
                                 <span className="relative z-10 flex items-center justify-center gap-2">
                                     ⚔️ Code: Omega (Normal)
                                 </span>
                             </button>
-                            <button onClick={startUnlimitedMode}
-                                className="group relative px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 transition-all overflow-hidden">
+                            <button onClick={() => navigate('/omega-unlimited')}
+                                className="group relative px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl font-bold text-lg text-white shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 transition-all overflow-hidden">
                                 <span className="relative z-10 flex items-center justify-center gap-2">
                                     ♾️ Code: Omega (Unlimited)
                                 </span>
                             </button>
-                            <button onClick={() => startArrowQuiz()}
-                                className="group relative px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all overflow-hidden">
+                            <button onClick={() => navigate('/arrow-quiz')}
+                                className="group relative px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl font-bold text-lg text-white shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1 transition-all overflow-hidden">
                                 <span className="relative z-10 flex items-center justify-center gap-2">
                                     🏹 Cosmo Arrow
                                 </span>
                             </button>
                         </div>
                         
-                        <div className="mt-8 pt-6 border-t border-slate-800">
-                             <Link to="/ranking" className="group flex items-center justify-center gap-2 text-slate-400 hover:text-yellow-400 font-bold transition-all p-3 rounded-xl hover:bg-slate-800">
+                        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+                             <Link to="/ranking" className="group flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 hover:text-yellow-500 dark:hover:text-yellow-400 font-bold transition-all p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
                                  <Trophy className="w-5 h-5" />
                                  <span>Hall of Fame</span>
                              </Link>
@@ -704,10 +758,10 @@ export default function QuizMode() {
 
                     {/* Right Panel: Info & Stats */}
                     <div className="w-full max-w-[400px] flex flex-col gap-4">
-                        <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-700 shadow-xl backdrop-blur">
+                        <div className="bg-white/60 dark:bg-slate-900/80 p-6 rounded-2xl border border-white/20 dark:border-slate-700 shadow-xl backdrop-blur-md">
                             <div className="flex justify-between items-center mb-4">
-                                <div className="text-slate-400 font-bold text-sm tracking-wider">{subMode === 'omega_unlimited' ? 'REMAINING' : 'TIMER'}</div>
-                                <div className={`font-led text-4xl font-black ${subMode === 'omega_unlimited' && (unlimitedStats.timeLimit - elapsedTime) < 5000 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
+                                <div className="text-slate-500 dark:text-slate-400 font-bold text-sm tracking-wider">{subMode === 'omega_unlimited' ? 'REMAINING' : 'TIMER'}</div>
+                                <div className={`font-led text-4xl font-black ${subMode === 'omega_unlimited' && (unlimitedStats.timeLimit - elapsedTime) < 5000 ? 'text-red-500 animate-pulse' : 'text-yellow-500 dark:text-yellow-400'}`}>
                                     {subMode === 'omega_unlimited'
                                         ? ((unlimitedStats.timeLimit - elapsedTime) / 1000).toFixed(2)
                                         : (elapsedTime / 1000).toFixed(2)
@@ -715,20 +769,22 @@ export default function QuizMode() {
                                 </div>
                             </div>
                             {subMode === 'omega_quiz' ? (
-                                <div className="flex justify-between items-center border-t border-slate-800 pt-4">
-                                    <div className="text-center">
-                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">AVG TIME</div>
-                                        <div className="text-xl font-bold text-white">{avgTime}s</div>
+                                <div className="grid grid-cols-4 divide-x divide-slate-200 dark:divide-slate-800 border-t border-slate-200 dark:border-slate-800 pt-4">
+                                    <div className="text-center px-1">
+                                        <div className="text-[9px] uppercase text-slate-500 dark:text-slate-500 font-bold mb-1">STREAK</div>
+                                        <div className="text-lg font-bold text-yellow-600 dark:text-yellow-500">{stats.streak}</div>
                                     </div>
-                                    <div className="h-8 w-px bg-slate-800"></div>
-                                    <div className="text-center">
-                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">CLEARS</div>
-                                        <div className="text-xl font-bold text-green-400">{stats.clears}</div>
+                                    <div className="text-center px-1">
+                                        <div className="text-[9px] uppercase text-slate-500 dark:text-slate-500 font-bold mb-1">AVG.T</div>
+                                        <div className="text-lg font-bold text-slate-800 dark:text-white">{avgTime}s</div>
                                     </div>
-                                    <div className="h-8 w-px bg-slate-800"></div>
-                                    <div className="text-center">
-                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">FAILS</div>
-                                        <div className="text-xl font-bold text-red-400">{stats.fails}</div>
+                                    <div className="text-center px-1">
+                                        <div className="text-[9px] uppercase text-slate-500 dark:text-slate-500 font-bold mb-1">CLEARS</div>
+                                        <div className="text-lg font-bold text-green-600 dark:text-green-400">{stats.clears}</div>
+                                    </div>
+                                    <div className="text-center px-1">
+                                        <div className="text-[9px] uppercase text-slate-500 dark:text-slate-500 font-bold mb-1">FAILS</div>
+                                        <div className="text-lg font-bold text-red-500 dark:text-red-400">{stats.fails}</div>
                                     </div>
                                 </div>
                             ) : (

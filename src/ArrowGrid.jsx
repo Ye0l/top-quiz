@@ -2,10 +2,10 @@ import React from 'react';
 
 function ArrowGrid({ activeIndices, isInteractive = false, onCellClick, history = [], selectedCell = null }) {
     return (
-        <div className="relative w-full shrink-0 bg-slate-900 border-4 border-slate-700 rounded-lg shadow-2xl mx-auto" style={{ aspectRatio: '1/1' }}>
+        <div className="relative w-full shrink-0 bg-white/50 dark:bg-slate-900 border-4 border-white/40 dark:border-slate-700 rounded-lg shadow-2xl mx-auto backdrop-blur-sm transition-colors duration-300" style={{ aspectRatio: '1/1' }}>
 
             {/* 1. Inscribed Circle */}
-            <div className="absolute inset-0 m-1 rounded-full border-2 border-slate-600 opacity-30 pointer-events-none">
+            <div className="absolute inset-0 m-1 rounded-full border-2 border-slate-300 dark:border-slate-600 opacity-30 pointer-events-none transition-colors duration-300">
             </div>
 
             {/* 2. 10x10 Grid Overlay */}
@@ -23,13 +23,16 @@ function ArrowGrid({ activeIndices, isInteractive = false, onCellClick, history 
                     // Find index in history to determine color intensity (recent = darker/brighter)
                     const historyIndex = history.findIndex(h => h.r === row && h.c === col);
                     const isHistory = historyIndex !== -1;
-                    const isLastHistory = isHistory && historyIndex === history.length - 1;
+                    
+                    // Correctly check if this cell matches the VERY LAST entry in history
+                    const lastHistory = history[history.length - 1];
+                    const isLastHistory = lastHistory && lastHistory.r === row && lastHistory.c === col;
 
                     // Center line guide
                     const isCenterLine = row === 4 || row === 5 || col === 4 || col === 5;
 
-                    let bgClass = 'bg-slate-800/20';
-                    let borderClass = 'border-slate-800/30';
+                    let bgClass = 'bg-slate-200/50 dark:bg-slate-800/20';
+                    let borderClass = 'border-slate-300/50 dark:border-slate-800/30';
                     let effectsClass = 'scale-100';
 
                     if (isHit) {
@@ -44,7 +47,7 @@ function ArrowGrid({ activeIndices, isInteractive = false, onCellClick, history 
                         bgClass = 'bg-green-500/30';
                         borderClass = 'border-green-500/40';
                     } else {
-                        effectsClass = 'hover:bg-slate-700/50';
+                        effectsClass = 'hover:bg-indigo-100/50 dark:hover:bg-slate-700/50';
                     }
 
                     // Selected State (Mobile Confirm Pending)
@@ -60,15 +63,15 @@ function ArrowGrid({ activeIndices, isInteractive = false, onCellClick, history 
                             className={`relative rounded-sm transition-all duration-300 ease-out border-[0.5px] ${bgClass} ${borderClass} ${effectsClass}`}
                         >
                             {/* Center marker */}
-                            {isCenterLine && !isHit && !isHistory && <div className="absolute inset-0 bg-blue-500/10 pointer-events-none"></div>}
+                            {isCenterLine && !isHit && !isHistory && <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/10 pointer-events-none"></div>}
                         </div>
                     );
                 })}
             </div>
 
             {/* Center Crosshair (Guide) */}
-            <div className="absolute top-1/2 left-0 w-full h-px bg-blue-500/30 pointer-events-none"></div>
-            <div className="absolute left-1/2 top-0 h-full w-px bg-blue-500/30 pointer-events-none"></div>
+            <div className="absolute top-1/2 left-0 w-full h-px bg-blue-500/30 dark:bg-blue-500/30 pointer-events-none"></div>
+            <div className="absolute left-1/2 top-0 h-full w-px bg-blue-500/30 dark:bg-blue-500/30 pointer-events-none"></div>
 
         </div>
     );
