@@ -65,7 +65,7 @@ const WeaponIcons = {
     )
 };
 
-export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, onAnswerSpotClick, selectedSpot = null, previousAnswerSpot = null, correctSpots = [], showAttacks = false, isTransitioning = false, isMobile = false }) {
+export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, onAnswerSpotClick, selectedSpot = null, previousAnswerSpot = null, correctSpots = [], showAttacks = false, isTransitioning = false, isMobile = false, isCenterRevealed = true }) {
 
     // Find Center Unit Type
     const centerUnit = placedUnits.find(u => u.position === 'center');
@@ -284,14 +284,16 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
                                     {/* Center Attack Indicator (Monitor Projection) */}
                                     {/* Vertical Type -> Vertical Bar (Blue-Black-Blue) */}
                                     {/* Horizontal Type -> Horizontal Bar */}
-                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                        <div className={`transition-all bg-slate-900 border-blue-400 shadow-[0_0_20px_#3b82f6] opacity-90
-                                        ${isVert
-                                                ? 'w-[28%] h-full border-x-[6px] border-y-0'
-                                                : 'w-full h-[28%] border-y-[6px] border-x-0'
-                                            }
+                                    {unit && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className={`transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] bg-slate-900 border-blue-400 shadow-[0_0_20px_#3b82f6] opacity-90
+                                        ${isCenterRevealed
+                                                    ? (isVert ? 'w-[28%] h-full border-x-[6px] border-y-0 rounded-none' : 'w-full h-[28%] border-y-[6px] border-x-0 rounded-none')
+                                                    : 'w-[12%] h-[12%] border-2 rounded-full animate-pulse bg-blue-500/50'
+                                                }
                                     `}></div>
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

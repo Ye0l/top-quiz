@@ -22,11 +22,17 @@ export default function QuizMode() {
         totalTime: 0, // ms
         history: [] // { type: 'clear'|'fail', time: ms }
     });
+    const [unlimitedStats, setUnlimitedStats] = useState({
+        level: 1,
+        timeLimit: 15000, // ms
+        score: 0
+    });
 
     const [startTime, setStartTime] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [feedbackMsg, setFeedbackMsg] = useState('');
     const [userSelectedSpot, setUserSelectedSpot] = useState(null);
+    const [isCenterRevealed, setIsCenterRevealed] = useState(false);
 
     // --- Arrow Quiz State ---
     const [arrowState, setArrowState] = useState({
@@ -58,6 +64,7 @@ export default function QuizMode() {
 
     const startOmegaSet = () => {
         const p1 = getNextOmegaProblem(null, null);
+        setIsCenterRevealed(false);
         setCurrentSet({
             p1: p1,
             p2: null,
@@ -65,6 +72,28 @@ export default function QuizMode() {
             ghosts: []
         });
         setOmegaState('p1_playing');
+        // setStartTime will be handled in the reveal effect
+        setElapsedTime(0);
+        setUserSelectedSpot(null);
+        setFeedbackMsg('');
+    };
+
+    const startUnlimitedMode = () => {
+        const p1 = getNextOmegaProblem(null, null);
+        setSubMode('omega_unlimited');
+        setOmegaState('unlimited_playing');
+        setCurrentSet({
+            p1: p1,
+            p2: null,
+            p1Answer: null,
+            ghosts: []
+        });
+        setUnlimitedStats({
+            level: 1,
+            timeLimit: 15000,
+            score: 0
+        });
+        setIsCenterRevealed(true); // No delay in unlimited
         setStartTime(Date.now());
         setElapsedTime(0);
         setUserSelectedSpot(null);
@@ -72,7 +101,7 @@ export default function QuizMode() {
     };
 
     const handleOmegaAnswer = (spotId) => {
-        if (omegaState !== 'p1_playing' && omegaState !== 'p2_playing') return;
+        if (omegaState !== 'p1_playing' && omegaState !== 'p2_playing' && omegaState !== 'unlimited_playing') return;
 
         // Mobile Logic:
         if (isMobile) {
@@ -91,15 +120,12 @@ export default function QuizMode() {
         }
     };
 
+
+
     const submitOmegaAnswer = (spotId) => {
         if (!spotId) return;
 
-        // Mobile confirmation might happen when state changed (e.g. timeout), though unlikely with current logic.
-        // Re-check state just in case if called async (though usually state is captured in closure if we passed it, 
-        // but here we rely on current state access? No, spotId is passed).
-        // However, we need `omegaState` and `currentSet` from scope.
-
-        let currentProblem = omegaState === 'p1_playing' ? currentSet.p1 : currentSet.p2;
+        let currentProblem = (omegaState === 'p1_playing' || omegaState === 'unlimited_playing') ? currentSet.p1 : currentSet.p2;
         const isCorrect = currentProblem.correctSpots.includes(spotId);
 
         if (isCorrect) {
@@ -107,18 +133,48 @@ export default function QuizMode() {
                 // Correct P1 -> Move to P2
                 setOmegaState('p1_feedback');
                 setFeedbackMsg('P1 CLEAR! Next Pattern Incoming...');
-
-                // Save P1 answer
                 setCurrentSet(prev => ({ ...prev, p1Answer: spotId }));
-
-                // Prepare P2 immediately (or after delay)
-                // Prepare P2 after delay and transition
                 setTimeout(() => {
-                    setOmegaState('p1_transition'); // Trigger Fade Out
+                    setOmegaState('p1_transition');
                     setTimeout(() => {
                         generateP2(currentSet.p1);
-                    }, 500); // 0.5s Fade Out Duration
-                }, 2000); // 2.0s View Time (Total approx 2.5s)
+                    }, 500);
+                }, 2000);
+            } else if (omegaState === 'unlimited_playing') {
+                // Unlimited Mode Correct Feedback
+                setOmegaState('unlimited_feedback');
+                setFeedbackMsg('CORRECT!');
+
+                setTimeout(() => {
+                    // Logic to move to next level
+                    let nextLimit = unlimitedStats.timeLimit;
+                    if (nextLimit > 5000) {
+                        nextLimit -= 1000;
+                    } else if (nextLimit > 2000) {
+                        nextLimit -= 500;
+                    }
+                    if (nextLimit < 2000) nextLimit = 2000;
+
+                    setUnlimitedStats(prev => ({
+                        level: prev.level + 1,
+                        timeLimit: nextLimit,
+                        score: prev.score + 1
+                    }));
+
+                    // Next Problem
+                    const nextP = getNextOmegaProblem(null, null);
+                    setCurrentSet({
+                        p1: nextP,
+                        p2: null,
+                        p1Answer: null,
+                        ghosts: []
+                    });
+                    setStartTime(Date.now());
+                    setElapsedTime(0);
+                    setUserSelectedSpot(null);
+                    setFeedbackMsg('');
+                    setOmegaState('unlimited_playing');
+                }, 500); // 0.5s Feedback
             } else {
                 // Correct P2 -> Set Clear
                 setOmegaState('set_clear');
@@ -127,11 +183,16 @@ export default function QuizMode() {
                 updateStats('clear', timeTaken);
             }
         } else {
-            // Wrong -> Set Fail
-            setOmegaState('set_fail');
-            setFeedbackMsg('FAILURE! Incorrect Spot.');
-            const timeTaken = Date.now() - startTime;
-            updateStats('fail', timeTaken);
+            // Wrong -> Fail
+            if (omegaState === 'unlimited_playing') {
+                setOmegaState('unlimited_fail');
+                setFeedbackMsg('GAME OVER');
+            } else {
+                setOmegaState('set_fail');
+                setFeedbackMsg('FAILURE! Incorrect Spot.');
+                const timeTaken = Date.now() - startTime;
+                updateStats('fail', timeTaken);
+            }
         }
     };
 
@@ -221,7 +282,8 @@ export default function QuizMode() {
             ghosts: ghosts
         }));
 
-        setStartTime(Date.now() - elapsedTime); // Resume timer from current elapsed
+        // setStartTime(Date.now() - elapsedTime); // Handled in reveal effect to pause timer
+        setIsCenterRevealed(false);
         setOmegaState('p2_playing');
         setUserSelectedSpot(null);
         setFeedbackMsg('');
@@ -240,23 +302,45 @@ export default function QuizMode() {
     // Timer Loop
     useEffect(() => {
         let interval;
-        if (omegaState === 'p1_playing' || omegaState === 'p2_playing') {
+        if ((omegaState === 'p1_playing' || omegaState === 'p2_playing' || omegaState === 'unlimited_playing') && isCenterRevealed) {
             interval = setInterval(() => {
                 const now = Date.now();
                 const elapsed = now - startTime;
-                if (elapsed >= 30000) {
-                    setElapsedTime(30000);
-                    setOmegaState('set_fail');
-                    setFeedbackMsg('TIME LIMIT EXCEEDED!');
-                    updateStats('fail', 30000);
+
+                const limit = omegaState === 'unlimited_playing' ? unlimitedStats.timeLimit : 30000;
+
+                if (elapsed >= limit) {
+                    setElapsedTime(limit);
+                    if (omegaState === 'unlimited_playing') {
+                        setOmegaState('unlimited_fail');
+                        setFeedbackMsg('TIME LIMIT!');
+                    } else {
+                        setOmegaState('set_fail');
+                        setFeedbackMsg('TIME LIMIT EXCEEDED!');
+                        updateStats('fail', 30000);
+                    }
                     clearInterval(interval);
                 } else {
                     setElapsedTime(elapsed);
                 }
-            }, 100);
+            }, 50); // Faster update for smooth bar
         }
         return () => clearInterval(interval);
-    }, [omegaState, startTime]);
+    }, [omegaState, startTime, isCenterRevealed, unlimitedStats.timeLimit]);
+
+    // Center Reveal Timer
+    useEffect(() => {
+        let timer;
+        if (omegaState === 'p1_playing' || omegaState === 'p2_playing') {
+            timer = setTimeout(() => {
+                setIsCenterRevealed(true);
+                setStartTime(Date.now() - elapsedTime);
+            }, 3000);
+        } else {
+            setIsCenterRevealed(true);
+        }
+        return () => clearTimeout(timer);
+    }, [omegaState, elapsedTime]);
 
     // Average Calc
     const avgTime = stats.clears > 0 ? (stats.totalTime / stats.clears / 1000).toFixed(1) : '0.0';
@@ -463,12 +547,14 @@ export default function QuizMode() {
             } else {
                 problem = currentSet.p1;
             }
+        } else if (omegaState === 'unlimited_playing' || omegaState === 'unlimited_fail' || omegaState === 'unlimited_feedback') {
+            problem = currentSet.p1;
         }
 
         if (!problem) return null;
         const displayUnits = [...problem.units, ...ghosts];
-        const isInteractive = omegaState === 'p1_playing' || omegaState === 'p2_playing';
-        const correctSpots = (omegaState === 'set_clear' || omegaState === 'p1_feedback') ? problem.correctSpots : [];
+        const isInteractive = omegaState === 'p1_playing' || omegaState === 'p2_playing' || omegaState === 'unlimited_playing';
+        const correctSpots = (omegaState === 'set_clear' || omegaState === 'p1_feedback' || omegaState === 'unlimited_fail' || omegaState === 'unlimited_feedback') ? problem.correctSpots : [];
 
         return (
             <OmegaField
@@ -478,9 +564,10 @@ export default function QuizMode() {
                 selectedSpot={userSelectedSpot}
                 previousAnswerSpot={currentSet.p1Answer}
                 correctSpots={correctSpots}
-                showAttacks={omegaState === 'p1_feedback' || omegaState === 'set_fail' || omegaState === 'set_clear' || omegaState === 'p1_transition'}
+                showAttacks={omegaState === 'p1_feedback' || omegaState === 'set_fail' || omegaState === 'set_clear' || omegaState === 'p1_transition' || omegaState === 'unlimited_fail' || omegaState === 'unlimited_feedback'}
                 isTransitioning={omegaState === 'p1_transition'}
                 isMobile={isMobile}
+                isCenterRevealed={isCenterRevealed}
             />
         );
     };
@@ -499,7 +586,13 @@ export default function QuizMode() {
                             <button onClick={() => { setSubMode('omega_quiz'); startOmegaSet(); }}
                                 className="group relative px-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-red-500/20 hover:-translate-y-1 transition-all overflow-hidden">
                                 <span className="relative z-10 flex items-center justify-center gap-2">
-                                    ⚔️ Code: Omega
+                                    ⚔️ Code: Omega (Normal)
+                                </span>
+                            </button>
+                            <button onClick={startUnlimitedMode}
+                                className="group relative px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl font-bold text-lg shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 transition-all overflow-hidden">
+                                <span className="relative z-10 flex items-center justify-center gap-2">
+                                    ♾️ Code: Omega (Unlimited)
                                 </span>
                             </button>
                             <button onClick={() => startArrowQuiz()}
@@ -513,7 +606,7 @@ export default function QuizMode() {
                 </div>
             )}
 
-            {subMode === 'omega_quiz' && (
+            {(subMode === 'omega_quiz' || subMode === 'omega_unlimited') && (
                 <div className="flex flex-col xl:flex-row gap-8 w-full px-4 md:px-8 items-center xl:items-start justify-center animate-in fade-in duration-300">
                     {/* Left Panel: Field */}
                     <div className="w-full max-w-[75vh] shrink-0">
@@ -526,49 +619,76 @@ export default function QuizMode() {
                     <div className="w-full max-w-[400px] flex flex-col gap-4">
                         <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-700 shadow-xl backdrop-blur">
                             <div className="flex justify-between items-center mb-4">
-                                <div className="text-slate-400 font-bold text-sm tracking-wider">TIMER</div>
-                                <div className="font-mono text-4xl font-black text-yellow-400">
-                                    {(elapsedTime / 1000).toFixed(1)}<span className="text-lg text-slate-500 ml-1">s</span>
+                                <div className="text-slate-400 font-bold text-sm tracking-wider">{subMode === 'omega_unlimited' ? 'REMAINING' : 'TIMER'}</div>
+                                <div className={`font-mono text-4xl font-black ${subMode === 'omega_unlimited' && (unlimitedStats.timeLimit - elapsedTime) < 5000 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
+                                    {subMode === 'omega_unlimited'
+                                        ? ((unlimitedStats.timeLimit - elapsedTime) / 1000).toFixed(1)
+                                        : (elapsedTime / 1000).toFixed(1)
+                                    }<span className="text-lg text-slate-500 ml-1">s</span>
                                 </div>
                             </div>
-                            <div className="flex justify-between items-center border-t border-slate-800 pt-4">
-                                <div className="text-center">
-                                    <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">AVG TIME</div>
-                                    <div className="text-xl font-bold text-white">{avgTime}s</div>
+                            {subMode === 'omega_quiz' ? (
+                                <div className="flex justify-between items-center border-t border-slate-800 pt-4">
+                                    <div className="text-center">
+                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">AVG TIME</div>
+                                        <div className="text-xl font-bold text-white">{avgTime}s</div>
+                                    </div>
+                                    <div className="h-8 w-px bg-slate-800"></div>
+                                    <div className="text-center">
+                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">CLEARS</div>
+                                        <div className="text-xl font-bold text-green-400">{stats.clears}</div>
+                                    </div>
+                                    <div className="h-8 w-px bg-slate-800"></div>
+                                    <div className="text-center">
+                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">FAILS</div>
+                                        <div className="text-xl font-bold text-red-400">{stats.fails}</div>
+                                    </div>
                                 </div>
-                                <div className="h-8 w-px bg-slate-800"></div>
-                                <div className="text-center">
-                                    <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">CLEARS</div>
-                                    <div className="text-xl font-bold text-green-400">{stats.clears}</div>
+                            ) : (
+                                <div className="flex justify-between items-center border-t border-slate-800 pt-4">
+                                    <div className="text-center w-full">
+                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">CURRENT STAGE</div>
+                                        <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400">STAGE {unlimitedStats.level}</div>
+                                    </div>
+                                    <div className="h-8 w-px bg-slate-800"></div>
+                                    <div className="text-center w-full">
+                                        <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">LIMIT</div>
+                                        <div className="text-xl font-bold text-red-400">{unlimitedStats.timeLimit / 1000}s</div>
+                                    </div>
                                 </div>
-                                <div className="h-8 w-px bg-slate-800"></div>
-                                <div className="text-center">
-                                    <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">FAILS</div>
-                                    <div className="text-xl font-bold text-red-400">{stats.fails}</div>
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-700 shadow-xl min-h-[150px] flex flex-col items-center justify-center text-center">
-                            {(omegaState === 'set_clear' || omegaState === 'set_fail') ? (
+                            {(omegaState === 'set_clear' || omegaState === 'set_fail' || omegaState === 'unlimited_fail') ? (
                                 <>
                                     <div className={`text-4xl font-black mb-2 animate-bounce ${omegaState === 'set_clear' ? 'text-green-500' : 'text-red-500'}`}>
-                                        {omegaState === 'set_clear' ? 'PERFECT!' : 'FAILED'}
+                                        {omegaState === 'set_clear' ? 'PERFECT!' : 'GAME OVER'}
                                     </div>
-                                    <div className="text-slate-400 mb-6">{feedbackMsg}</div>
-                                    <button onClick={startOmegaSet} className="w-full py-4 bg-white text-slate-950 font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2">
-                                        NEXT SET <span className="text-xl">➔</span>
+                                    <div className="text-slate-400 mb-6 flex flex-col items-center">
+                                        {omegaState === 'unlimited_fail' ? (
+                                            <>
+                                                <div className="text-lg text-white font-bold mb-1">Reached STAGE {unlimitedStats.level}</div>
+                                                <div className="text-sm text-slate-500">Fastest Interval: {unlimitedStats.timeLimit / 1000}s</div>
+                                            </>
+                                        ) : (
+                                            feedbackMsg
+                                        )}
+                                    </div>
+                                    <button onClick={omegaState === 'unlimited_fail' ? startUnlimitedMode : startOmegaSet} className="w-full py-4 bg-white text-slate-950 font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2">
+                                        {omegaState === 'unlimited_fail' ? 'RETRY' : 'NEXT SET'} <span className="text-xl">➔</span>
                                     </button>
                                 </>
                             ) : (
                                 <>
                                     <div className="text-2xl font-bold text-blue-200 mb-2">
-                                        {omegaState === 'p1_playing' ? 'ROUND 1' : omegaState === 'p2_playing' ? 'ROUND 2' : '...'}
+                                        {omegaState === 'p1_playing' ? 'ROUND 1' : omegaState === 'p2_playing' ? 'ROUND 2' : omegaState === 'unlimited_playing' ? `STAGE ${unlimitedStats.level}` : omegaState === 'unlimited_feedback' ? 'GOOD!' : '...'}
                                     </div>
                                     <div className="text-slate-400 text-sm">
                                         {omegaState === 'p1_playing' && "Identify the safe spot."}
                                         {omegaState === 'p2_playing' && "Center Changed! Watch for the new safe spot."}
                                         {omegaState === 'p1_feedback' && "Correct! Prepare for Round 2..."}
+                                        {(omegaState === 'unlimited_playing' || omegaState === 'unlimited_feedback') && "Survive as long as you can."}
                                     </div>
                                 </>
                             )}
@@ -664,10 +784,11 @@ export default function QuizMode() {
 
                         {/* CONFIRM BUTTON (Playing State) */}
                         {((subMode === 'omega_quiz' && (omegaState === 'p1_playing' || omegaState === 'p2_playing')) ||
+                            (subMode === 'omega_unlimited' && omegaState === 'unlimited_playing') ||
                             (subMode === 'arrow_quiz' && arrowState.status === 'playing' && arrowProblem?.isQuestion)) && (
                                 <button
                                     onClick={() => {
-                                        if (subMode === 'omega_quiz') submitOmegaAnswer(userSelectedSpot);
+                                        if (subMode === 'omega_quiz' || subMode === 'omega_unlimited') submitOmegaAnswer(userSelectedSpot);
                                         if (subMode === 'arrow_quiz' && userSelectedArrow) submitArrowAnswer(userSelectedArrow);
                                     }}
                                     disabled={subMode === 'omega_quiz' ? !userSelectedSpot : !userSelectedArrow}
@@ -683,10 +804,10 @@ export default function QuizMode() {
                         {/* RETRY / NEXT / MENU BUTTONS (Result State) */}
 
                         {/* Omega Result Actions */}
-                        {subMode === 'omega_quiz' && (omegaState === 'set_clear' || omegaState === 'set_fail') && (
+                        {(subMode === 'omega_quiz' || subMode === 'omega_unlimited') && (omegaState === 'set_clear' || omegaState === 'set_fail' || omegaState === 'unlimited_fail') && (
                             <>
-                                <button onClick={startOmegaSet} className="px-6 py-3 bg-white text-slate-900 font-bold rounded-xl shadow-lg hover:scale-105">
-                                    {omegaState === 'set_clear' ? 'NEXT' : 'RETRY'}
+                                <button onClick={subMode === 'omega_unlimited' ? startUnlimitedMode : startOmegaSet} className="px-6 py-3 bg-white text-slate-900 font-bold rounded-xl shadow-lg hover:scale-105">
+                                    {omegaState === 'set_clear' || omegaState === 'unlimited_playing' ? 'NEXT' : 'RETRY'}
                                 </button>
                                 <button onClick={returnToMenu} className="px-4 py-3 bg-slate-800 text-white font-bold rounded-xl shadow-md">
                                     EXIT
@@ -708,6 +829,7 @@ export default function QuizMode() {
 
                         {/* EXIT Button (Playing) */}
                         {((subMode === 'omega_quiz' && (omegaState === 'p1_playing' || omegaState === 'p2_playing')) ||
+                            (subMode === 'omega_unlimited' && omegaState === 'unlimited_playing') ||
                             (subMode === 'arrow_quiz' && arrowState.status === 'playing')) && (
                                 <button onClick={returnToMenu} className="px-4 py-3 bg-slate-800/80 text-slate-400 hover:text-white font-bold rounded-xl border border-slate-700">
                                     ✕
