@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import QuizMode from './QuizMode';
 import RankingPage from './pages/RankingPage';
 import { UserProvider } from './contexts/UserContext';
@@ -22,7 +22,7 @@ export default function App() {
 
     return (
         <UserProvider>
-            <BrowserRouter>
+            <HashRouter>
                 <div className="relative h-full min-h-screen flex flex-col bg-slate-950 overflow-hidden text-white font-sans selection:bg-blue-500/30">
                     
                     {/* Floating Identity Widget - Top Left to avoid overlap with Game UI (Timer/Steps usually on Right) */}
@@ -35,7 +35,7 @@ export default function App() {
                         <Route path="/ranking" element={<RankingPage />} />
                     </Routes>
                 </div>
-            </BrowserRouter>
+            </HashRouter>
         </UserProvider>
     );
 }

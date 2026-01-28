@@ -86,9 +86,9 @@ export const getJobIconUrl = (job) => {
     // If input is Korean name, map to English code
     const code = JOB_MAP[job];
     if (code) {
-        return `/assets/fficons/${code.toLowerCase()}.png`;
+        return `./assets/fficons/${code.toLowerCase()}.png`;
     }
     
     // Fallback: If it's already English code (legacy data)
-    return `/assets/fficons/${job.toLowerCase()}.png`;
+    return `./assets/fficons/${job.toLowerCase()}.png`;
 };
