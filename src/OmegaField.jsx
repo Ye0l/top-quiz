@@ -65,7 +65,7 @@ const WeaponIcons = {
     )
 };
 
-export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, onAnswerSpotClick, selectedSpot = null, previousAnswerSpot = null, correctSpots = [], showAttacks = false, isTransitioning = false, isMobile = false, isCenterRevealed = true }) {
+function OmegaField({ placedUnits = [], onSlotClick, showAnswerSpots = false, onAnswerSpotClick, selectedSpot = null, previousAnswerSpot = null, correctSpots = [], showAttacks = false, isTransitioning = false, isMobile = false, isCenterRevealed = true }) {
 
     // Find Center Unit Type
     const centerUnit = placedUnits.find(u => u.position === 'center');
@@ -355,3 +355,5 @@ export default function OmegaField({ placedUnits = [], onSlotClick, showAnswerSp
         </div >
     );
 }
+
+export default React.memo(OmegaField);

@@ -1,0 +1,76 @@
+/*
+Font License:
+Moonbase Omega: Free for personal use. Created by Darrell Flood.
+Pretendard: SIL Open Font License 1.1.
+Orbitron: SIL Open Font License 1.1.
+*/
+
+/* --- Google Fonts Import (Orbitron) --- */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
+
+/* --- Moonbase Omega --- */
+@font-face {
+  font-family: 'Moonbase Omega';
+  src: url('./assets/fonts/moonbase_omega/Moonbase Omega.ttf') format('truetype'),
+    url('./assets/fonts/moonbase_omega/Moonbase Omega.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Moonbase Omega';
+  src: url('./assets/fonts/moonbase_omega/Moonbase Omega Italic.ttf') format('truetype'),
+    url('./assets/fonts/moonbase_omega/Moonbase Omega Italic.otf') format('opentype');
+  font-weight: normal;
+  font-style: italic;
+}
+
+/* --- Pretendard --- */
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/pretendard/Pretendard-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/pretendard/Pretendard-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/pretendard/Pretendard-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('./assets/fonts/pretendard/Pretendard-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Global Reset & Base Style */
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings with Moonbase Omega */
+h1,
+h2 {
+  font-family: 'Moonbase Omega', sans-serif;
+  font-weight: normal;
+  /* Remove bold as requested since the font is thick */
+}
+
+/* LED/Timer Font Utility */
+.font-led {
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 0.1em;
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function ArrowGrid({ activeIndices, isInteractive = false, onCellClick, history = [], selectedCell = null }) {
+function ArrowGrid({ activeIndices, isInteractive = false, onCellClick, history = [], selectedCell = null }) {
     return (
         <div className="relative w-full shrink-0 bg-slate-900 border-4 border-slate-700 rounded-lg shadow-2xl mx-auto" style={{ aspectRatio: '1/1' }}>
 
@@ -73,3 +73,5 @@ export default function ArrowGrid({ activeIndices, isInteractive = false, onCell
         </div>
     );
 }
+
+export default React.memo(ArrowGrid);
